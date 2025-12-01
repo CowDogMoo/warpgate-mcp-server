@@ -1,0 +1,223 @@
+---
+version: "3"
+
+# Global variables
+vars:
+  BINARY_NAME: warpgate-mcp-server
+  DOCKER_IMAGE: warpgate-mcp-server:dev
+  VERSION:
+    sh: git describe --tags --always --dirty 2>/dev/null || echo "0.1.0"
+  GIT_COMMIT:
+    sh: git rev-parse HEAD 2>/dev/null || echo "unknown"
+  BUILD_DATE:
+    sh: date -u +"%Y-%m-%dT%H:%M:%SZ"
+
+includes:
+  pre-commit: "https://raw.githubusercontent.com/CowDogMoo/taskfile-templates/main/pre-commit/Taskfile.yaml"
+  github: "https://raw.githubusercontent.com/CowDogMoo/taskfile-templates/main/github/Taskfile.yaml"
+
+# Tasks start here
+tasks:
+  # Default task to run all CI tasks
+  default:
+    desc: "Run all CI tasks"
+    cmds:
+      - task: run-pre-commit
+
+  # Build the binary with version information
+  build:
+    desc: "Build the binary with version information from git"
+    cmds:
+      - |
+        echo "Building {{.BINARY_NAME}}..."
+        go build \
+          -ldflags "-X 'github.com/cowdogmoo/warpgate-mcp-server/version.Version={{.VERSION}}' \
+          -X 'github.com/cowdogmoo/warpgate-mcp-server/version.GitCommit={{.GIT_COMMIT}}' \
+          -X 'github.com/cowdogmoo/warpgate-mcp-server/version.BuildDate={{.BUILD_DATE}}'" \
+          -o {{.BINARY_NAME}} ./cmd/warpgate-mcp-server
+
+  # Install the binary to GOPATH/bin
+  install:
+    desc: "Install the binary to GOPATH/bin"
+    deps: [build]
+    cmds:
+      - |
+        echo "Installing {{.BINARY_NAME}}..."
+        go install \
+          -ldflags "-X 'github.com/cowdogmoo/warpgate-mcp-server/version.Version={{.VERSION}}' \
+          -X 'github.com/cowdogmoo/warpgate-mcp-server/version.GitCommit={{.GIT_COMMIT}}' \
+          -X 'github.com/cowdogmoo/warpgate-mcp-server/version.BuildDate={{.BUILD_DATE}}'" \
+          ./cmd/warpgate-mcp-server
+
+  # Run Go tests
+  test:
+    desc: "Run Go tests"
+    cmds:
+      - |
+        echo "Running tests..."
+        go test -v -race ./...
+
+  # Run tests with coverage
+  test-coverage:
+    desc: "Run Go tests with coverage report"
+    cmds:
+      - |
+        echo "Running tests with coverage..."
+        go test -v -race -coverprofile=coverage.out ./...
+        go tool cover -html=coverage.out -o coverage.html
+        echo "Coverage report generated at coverage.html"
+
+  # Clean build artifacts
+  clean:
+    desc: "Clean build artifacts"
+    cmds:
+      - |
+        echo "Cleaning..."
+        rm -f {{.BINARY_NAME}}
+        rm -f coverage.out coverage.html
+        docker rmi -f {{.DOCKER_IMAGE}} 2>/dev/null || true
+
+  # Format code
+  fmt:
+    desc: "Format code"
+    cmds:
+      - |
+        echo "Formatting code..."
+        go fmt ./...
+
+  # Run linters
+  lint:
+    desc: "Run linters"
+    cmds:
+      - |
+        echo "Running linters..."
+        golangci-lint run ./...
+
+  # Tidy go modules
+  tidy:
+    desc: "Tidy go modules"
+    cmds:
+      - |
+        echo "Tidying go modules..."
+        go mod tidy
+
+  # Download dependencies
+  deps:
+    desc: "Download dependencies"
+    cmds:
+      - |
+        echo "Downloading dependencies..."
+        go mod download
+
+  # Build Docker image
+  docker-build:
+    desc: "Build Docker image"
+    cmds:
+      - |
+        echo "Building Docker image..."
+        docker build -t {{.DOCKER_IMAGE}} .
+
+  # Run the server in Docker
+  docker-run:
+    desc: "Run the server in Docker"
+    deps: [docker-build]
+    cmds:
+      - |
+        echo "Running {{.DOCKER_IMAGE}}..."
+        docker run -i --rm \
+          -v {{env "HOME"}}/cowdogmoo/warpgate:/warpgate:ro \
+          -e WARPGATE_PATH=/warpgate \
+          {{.DOCKER_IMAGE}}
+
+  # Create a new feature branch
+  feature:
+    desc: "Create a new feature branch (usage: BRANCH_NAME=feat-name task feature)"
+    cmds:
+      - |
+        if [ -z "{{.BRANCH_NAME}}" ]; then
+          echo "Error: BRANCH_NAME is required"
+          echo "Usage: BRANCH_NAME=your-feature-name task feature"
+          exit 1
+        fi
+        git checkout -b feature/{{.BRANCH_NAME}}
+        echo "Created and switched to branch: feature/{{.BRANCH_NAME}}"
+
+  # Create a pull request with fabric-generated description
+  pr:
+    desc: "Create a pull request with auto-generated description"
+    cmds:
+      - |
+        CURRENT_BRANCH=$(git branch --show-current)
+        if [ "$CURRENT_BRANCH" = "main" ] || [ "$CURRENT_BRANCH" = "master" ]; then
+          echo "Error: Cannot create PR from main/master branch"
+          exit 1
+        fi
+
+        echo "Generating PR description with fabric..."
+        PR_BODY=$(git diff main...HEAD | fabric --pattern pr)
+
+        echo "Creating pull request..."
+        gh pr create --title "$(echo "$PR_BODY" | head -n 1)" --body "$PR_BODY"
+
+  # Check PR status
+  pr-status:
+    desc: "Check the status of the current branch's PR"
+    cmds:
+      - |
+        PR_NUMBER=$(gh pr view --json number -q .number 2>/dev/null)
+        if [ -z "$PR_NUMBER" ]; then
+          echo "No PR found for current branch"
+          exit 1
+        fi
+        echo "Checking PR #$PR_NUMBER..."
+        gh pr checks "$PR_NUMBER"
+
+  # Merge PR with squash
+  pr-merge:
+    desc: "Merge the current branch's PR with squash and cleanup"
+    cmds:
+      - task: github:pr-merge
+
+  # Task to update, clear cache, and run pre-commit hooks
+  run-pre-commit:
+    desc: "Update, clear cache, and run pre-commit hooks"
+    cmds:
+      - task: install-go-pc-deps
+      - task: pre-commit:update-hooks
+      - task: pre-commit:clear-cache
+      - task: pre-commit:run-hooks
+
+  # Task to create a release on GitHub
+  create-release:
+    desc: "Create a release on GitHub"
+    cmds:
+      - task: github:create-release
+
+  # Install Go dependencies for pre-commit hooks
+  install-go-pc-deps:
+    desc: "Install Go dependencies for pre-commit hooks"
+    cmds:
+      - |
+        echo "Installing Go dependencies for pre-commit hooks..."
+        deps=(
+          "golang.org/x/lint/golint"
+          "golang.org/x/tools/cmd/goimports"
+          "github.com/fzipp/gocyclo/cmd/gocyclo"
+          "github.com/golangci/golangci-lint/cmd/golangci-lint"
+          "github.com/go-critic/go-critic/cmd/gocritic"
+        )
+        for dep in "${deps[@]}"; do
+          echo "Installing $dep..."
+          if ! go install "$dep@latest"; then
+            echo "Failed to install $dep"
+            exit 1
+          fi
+        done
+        echo "All Go dependencies installed."
+
+  # Task to run pre-commit after installing dependencies
+  run-pre-commit-with-install:
+    desc: "Install Go dependencies and run pre-commit hooks"
+    cmds:
+      - task: install-go-pc-deps
+      - task: run-pre-commit

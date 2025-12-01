@@ -1,0 +1,60 @@
+---
+builds:
+  - id: "warpgate-mcp-server"
+
+    binary: warpgate-mcp-server
+
+    main: ./cmd/warpgate-mcp-server
+
+    ldflags:
+      - -s -w
+      - -X github.com/cowdogmoo/warpgate-mcp-server/version.Version={{.Version}}
+      - -X github.com/cowdogmoo/warpgate-mcp-server/version.GitCommit={{.Commit}}
+      - -X github.com/cowdogmoo/warpgate-mcp-server/version.BuildDate={{.Date}}
+
+    goos:
+      - linux
+      - darwin
+
+    goarch:
+      - amd64
+      - arm
+      - arm64
+
+    # GOARM to build for when GOARCH is arm.
+    goarm:
+      - 6
+      - 7
+
+    # GOAMD64 to build when GOARCH is amd64.
+    goamd64:
+      - v2
+      - v3
+
+    hooks:
+      pre: go mod tidy
+
+archives:
+  - format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - '^ci:'

@@ -1,0 +1,97 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
+  "name": "io.github.cowdogmoo/warpgate-mcp-server",
+  "title": "Warpgate",
+  "description": "Manage Warpgate templates and workflows for building security labs and multi-architecture containers",
+  "repository": {
+    "url": "https://github.com/cowdogmoo/warpgate-mcp-server",
+    "source": "github"
+  },
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "oci",
+      "identifier": "ghcr.io/cowdogmoo/warpgate-mcp-server:latest",
+      "transport": {
+        "type": "stdio"
+      },
+      "runtimeHint": "docker",
+      "runtimeArguments": [
+        {
+          "type": "positional",
+          "value": "run"
+        },
+        {
+          "type": "named",
+          "name": "--rm"
+        },
+        {
+          "type": "named",
+          "name": "-i"
+        },
+        {
+          "type": "named",
+          "name": "-v",
+          "description": "Mount the warpgate repository",
+          "isRepeated": true
+        },
+        {
+          "type": "positional",
+          "valueHint": "volume_mount",
+          "value": "/path/to/warpgate:/warpgate:ro",
+          "description": "Path to warpgate repository"
+        },
+        {
+          "type": "named",
+          "name": "-v",
+          "description": "Mount docker socket for docker operations",
+          "isRepeated": true
+        },
+        {
+          "type": "positional",
+          "valueHint": "volume_mount",
+          "value": "/var/run/docker.sock:/var/run/docker.sock",
+          "description": "Docker socket"
+        },
+        {
+          "type": "positional",
+          "valueHint": "image_name",
+          "value": "ghcr.io/cowdogmoo/warpgate-mcp-server:latest",
+          "description": "The container image to run"
+        },
+        {
+          "type": "positional",
+          "value": "stdio"
+        },
+        {
+          "type": "named",
+          "name": "--warpgate-path"
+        },
+        {
+          "type": "positional",
+          "value": "/warpgate",
+          "description": "Path to warpgate inside container"
+        }
+      ],
+      "environmentVariables": [
+        {
+          "name": "TASK_X_REMOTE_TASKFILES",
+          "description": "Enable remote taskfile loading",
+          "default": "1",
+          "isRequired": false
+        },
+        {
+          "name": "PACKER_LOG",
+          "description": "Enable Packer debug logging",
+          "default": "0",
+          "format": "boolean",
+          "choices": [
+            "0",
+            "1"
+          ],
+          "isRequired": false
+        }
+      ]
+    }
+  ]
+}
