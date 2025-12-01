@@ -5,15 +5,29 @@ package tools
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"text/template"
 
 	"github.com/cowdogmoo/warpgate-mcp-server/pkg/logging"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
+
+//go:embed templates/*.tmpl
+var templateFS embed.FS
+
+type templateData struct {
+	TemplateName     string
+	Description      string
+	BaseImage        string
+	BaseImageVersion string
+	IncludeAMI       bool
+	Title            string
+}
 
 func createTemplate(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
 	tool := mcp.Tool{
@@ -88,22 +102,33 @@ func createTemplate(s *server.MCPServer, logger *logging.Logger, warpgatePath st
 				fmt.Sprintf("Template '%s' already exists at %s", templateName, templateDir)), nil
 		}
 
-		// Create files
+		// Prepare template data
+		title := strings.ReplaceAll(strings.Title(strings.ReplaceAll(templateName, "-", " ")), " ", "-")
+		data := templateData{
+			TemplateName:     templateName,
+			Description:      description,
+			BaseImage:        baseImage,
+			BaseImageVersion: baseImageVersion,
+			IncludeAMI:       includeAMI,
+			Title:            title,
+		}
+
+		// Create files from templates
 		files := map[string]string{
-			"plugins.pkr.hcl":   generatePluginsFile(includeAMI),
-			"locals.pkr.hcl":    generateLocalsFile(),
-			"variables.pkr.hcl": generateVariablesFile(templateName, baseImage, baseImageVersion, includeAMI),
-			"docker.pkr.hcl":    generateDockerFile(templateName, description),
-			"README.md":         generateReadme(templateName, description, baseImage, includeAMI),
+			"plugins.pkr.hcl":   "templates/plugins.pkr.hcl.tmpl",
+			"locals.pkr.hcl":    "templates/locals.pkr.hcl.tmpl",
+			"variables.pkr.hcl": "templates/variables.pkr.hcl.tmpl",
+			"docker.pkr.hcl":    "templates/docker.pkr.hcl.tmpl",
+			"README.md":         "templates/README.md.tmpl",
 		}
 
 		if includeAMI {
-			files["ami.pkr.hcl"] = generateAMIFile(templateName, description)
+			files["ami.pkr.hcl"] = "templates/ami.pkr.hcl.tmpl"
 		}
 
-		for filename, content := range files {
+		for filename, templatePath := range files {
 			filePath := filepath.Join(templateDir, filename)
-			if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+			if err := renderTemplate(templatePath, filePath, data); err != nil {
 				logger.Errorf("Failed to create %s: %v", filename, err)
 				return mcp.NewToolResultError(
 					fmt.Sprintf("Failed to create %s: %v", filename, err)), nil
@@ -140,6 +165,34 @@ Next steps:
 	s.AddTool(tool, handler)
 }
 
+func renderTemplate(templatePath, outputPath string, data templateData) error {
+	// Read template file from embedded FS
+	content, err := templateFS.ReadFile(templatePath)
+	if err != nil {
+		return fmt.Errorf("failed to read template %s: %w", templatePath, err)
+	}
+
+	// Parse and execute template
+	tmpl, err := template.New(filepath.Base(templatePath)).Parse(string(content))
+	if err != nil {
+		return fmt.Errorf("failed to parse template %s: %w", templatePath, err)
+	}
+
+	// Create output file
+	f, err := os.Create(outputPath)
+	if err != nil {
+		return fmt.Errorf("failed to create output file %s: %w", outputPath, err)
+	}
+	defer f.Close()
+
+	// Execute template
+	if err := tmpl.Execute(f, data); err != nil {
+		return fmt.Errorf("failed to execute template %s: %w", templatePath, err)
+	}
+
+	return nil
+}
+
 func isValidTemplateName(name string) bool {
 	if name == "" {
 		return false
@@ -152,378 +205,3 @@ func isValidTemplateName(name string) bool {
 	return true
 }
 
-func generatePluginsFile(includeAMI bool) string {
-	plugins := `# Define the plugin(s) used by Packer.
-packer {
-  required_plugins {
-    docker = {
-      source  = "github.com/hashicorp/docker"
-      version = "~> 1"
-    }
-`
-	if includeAMI {
-		plugins += `    amazon = {
-      source  = "github.com/hashicorp/amazon"
-      version = "~> 1"
-    }
-    ansible = {
-      source  = "github.com/hashicorp/ansible"
-      version = "~> 1"
-    }
-`
-	}
-	plugins += `  }
-}
-`
-	return plugins
-}
-
-func generateLocalsFile() string {
-	return `locals {
-  timestamp = formatdate("YYYY-MM-DD-hh-mm-ss", timestamp())
-}
-`
-}
-
-func generateVariablesFile(templateName, baseImage, baseImageVersion string, includeAMI bool) string {
-	vars := fmt.Sprintf(`#######################################################
-#                  Warpgate variables                 #
-#######################################################
-variable "template_name" {
-  type        = string
-  description = "Name of the packer template."
-  default     = "%s"
-}
-
-variable "provision_repo_path" {
-  type        = string
-  description = "Path on disk to the repo that contains the provisioning code."
-  default     = ""
-}
-
-variable "shell" {
-  type        = string
-  description = "Shell to use."
-  default     = "/bin/bash"
-}
-
-############################################
-#           Container variables            #
-############################################
-variable "base_image" {
-  type        = string
-  description = "Base image."
-  default     = "%s"
-}
-
-variable "base_image_version" {
-  type        = string
-  description = "Version of the base image."
-  default     = "%s"
-}
-
-variable "entrypoint" {
-  type        = string
-  description = "Optional entrypoint script."
-  default     = ""
-}
-
-variable "manifest_path" {
-  type        = string
-  description = "Path to the generated manifest file."
-  default     = "manifest.json"
-}
-
-variable "user" {
-  type        = string
-  description = "Default user."
-  default     = "root"
-}
-
-variable "workdir" {
-  type        = string
-  description = "Working directory for a new container."
-  default     = "/root"
-}
-`, templateName, baseImage, baseImageVersion)
-
-	if includeAMI {
-		vars += `
-############################################
-#              AWS variables               #
-############################################
-variable "ami_region" {
-  type        = string
-  description = "AWS region to launch the instance and create AMI."
-  default     = "us-east-1"
-}
-
-variable "instance_type" {
-  type        = string
-  description = "The type of instance to use for the initial AMI creation."
-  default     = "t3.micro"
-}
-
-variable "disk_size" {
-  type        = number
-  description = "Disk size in GB for building the AMI."
-  default     = 50
-}
-
-variable "ssh_username" {
-  type        = string
-  description = "The SSH username for the AMI."
-  default     = "ubuntu"
-}
-
-variable "ssh_timeout" {
-  type        = string
-  description = "Timeout for SSH connections."
-  default     = "20m"
-}
-`
-	}
-
-	return vars
-}
-
-func generateDockerFile(templateName, description string) string {
-	titleComment := fmt.Sprintf("#########################################################################################\n# %s packer template\n#\n# Description: %s\n#########################################################################################", templateName, description)
-
-	return fmt.Sprintf(`%s
-# Docker AMD64 source configuration
-source "docker" "amd64" {
-  commit     = true
-  image      = "${var.base_image}:${var.base_image_version}"
-  platform   = "linux/amd64"
-  privileged = true
-
-  volumes = {
-    "/sys/fs/cgroup" = "/sys/fs/cgroup:rw"
-  }
-
-  changes = [
-    "ENTRYPOINT ${var.entrypoint}",
-    "USER ${var.user}",
-    "WORKDIR ${var.workdir}",
-  ]
-
-  run_command = ["-d", "-i", "-t", "--cgroupns=host", "{{ .Image }}"]
-}
-
-# Docker ARM64 source configuration
-source "docker" "arm64" {
-  commit     = true
-  image      = "${var.base_image}:${var.base_image_version}"
-  platform   = "linux/arm64"
-  privileged = true
-
-  changes = [
-    "ENTRYPOINT ${var.entrypoint}",
-    "USER ${var.user}",
-    "WORKDIR ${var.workdir}",
-  ]
-
-  volumes = {
-    "/sys/fs/cgroup" = "/sys/fs/cgroup:rw"
-  }
-
-  run_command = ["-d", "-i", "-t", "--cgroupns=host", "{{ .Image }}"]
-}
-
-build {
-  name = "%s-docker"
-  sources = [
-    "source.docker.amd64",
-    "source.docker.arm64"
-  ]
-
-  # Add your provisioning steps here
-  # Example: Install packages
-  provisioner "shell" {
-    only = ["docker.arm64", "docker.amd64"]
-    inline = [
-      "echo 'Add your provisioning commands here'",
-      "# apt-get update && apt-get install -y <your-packages>",
-    ]
-  }
-
-  # Clean up to reduce image size
-  provisioner "shell" {
-    only = ["docker.arm64", "docker.amd64"]
-    inline = [
-      "apt-get clean || true",
-      "rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* || true"
-    ]
-  }
-
-  # Create manifest with the necessary information to tag and push the created image(s)
-  post-processor "manifest" {
-    output     = "${var.manifest_path}"
-    strip_path = true
-  }
-}
-`, titleComment, templateName)
-}
-
-func generateAMIFile(templateName, description string) string {
-	titleComment := fmt.Sprintf("#########################################################################################\n# %s AMI packer template\n#\n# Description: %s\n#########################################################################################", templateName, description)
-
-	return fmt.Sprintf(`%s
-# AWS AMI source configuration
-source "amazon-ebs" "amd64" {
-  ami_name      = "%s-{{timestamp}}"
-  instance_type = var.instance_type
-  region        = var.ami_region
-  ssh_username  = var.ssh_username
-  ssh_timeout   = var.ssh_timeout
-
-  source_ami_filter {
-    filters = {
-      name                = "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"
-      root-device-type    = "ebs"
-      virtualization-type = "hvm"
-    }
-    most_recent = true
-    owners      = ["099720109477"] # Canonical
-  }
-
-  launch_block_device_mappings {
-    device_name = "/dev/sda1"
-    volume_size = var.disk_size
-    volume_type = "gp3"
-    delete_on_termination = true
-  }
-
-  tags = {
-    Name = "%s"
-    Built_By = "Packer"
-    Built_At = "{{timestamp}}"
-  }
-}
-
-build {
-  name = "%s-ami"
-  sources = [
-    "source.amazon-ebs.amd64"
-  ]
-
-  # Add your provisioning steps here
-  provisioner "shell" {
-    inline = [
-      "echo 'Add your AMI provisioning commands here'",
-      "sudo apt-get update",
-      "# sudo apt-get install -y <your-packages>",
-    ]
-  }
-
-  # Clean up
-  provisioner "shell" {
-    inline = [
-      "sudo apt-get clean",
-      "sudo rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*"
-    ]
-  }
-}
-`, titleComment, templateName, templateName, templateName)
-}
-
-func generateReadme(templateName, description, baseImage string, includeAMI bool) string {
-	title := strings.ReplaceAll(strings.Title(strings.ReplaceAll(templateName, "-", " ")), " ", "-")
-
-	readme := fmt.Sprintf(`# Packer Build for %s
-
-%s
-
----
-
-## Requirements
-
-- [Packer](https://www.packer.io/)
-- Docker (for building Docker images)
-`, title, description)
-
-	if includeAMI {
-		readme += `- AWS account & credentials (for AMI builds)
-`
-	}
-
-	readme += `- Required Packer plugins:
-  - ` + "`docker`\n"
-
-	if includeAMI {
-		readme += `  - ` + "`amazon`\n"
-		readme += `  - ` + "`ansible`" + ` (optional, for complex provisioning)\n`
-	}
-
-	readme += `
----
-
-## Variables
-
-See ` + "`variables.pkr.hcl`" + ` for all configurable parameters.
-
-Key variables:
-- ` + "`template_name`" + `: Name of the template (default: ` + "`" + templateName + "`)\n" +
-`- ` + "`base_image`" + `: Base Docker image (default: ` + "`" + baseImage + "`)\n" +
-`- ` + "`base_image_version`" + `: Version of the base image (default: ` + "`latest`)\n"
-
-	if includeAMI {
-		readme += `- ` + "`ami_region`" + `: AWS region for AMI creation (default: ` + "`us-east-1`)\n"
-	}
-
-	readme += `
----
-
-## Building Docker Images
-
-Initialize the template:
-
-` + "```bash" + `
-export TASK_X_REMOTE_TASKFILES=1
-task -y template-init TEMPLATE_NAME=` + templateName + `
-` + "```" + `
-
-Build the images:
-
-` + "```bash" + `
-export TASK_X_REMOTE_TASKFILES=1
-task -y template-build TEMPLATE_NAME=` + templateName + ` ONLY='` + templateName + `-docker.docker.*'
-` + "```" + `
-
----
-`
-
-	if includeAMI {
-		readme += `
-## Building AWS AMIs
-
-` + "```bash" + `
-export TASK_X_REMOTE_TASKFILES=1
-task -y template-build TEMPLATE_NAME=` + templateName + ` ONLY='` + templateName + `-ami.amazon-ebs.*'
-` + "```" + `
-
-> 🛡️ Ensure your AWS credentials are configured.
-
----
-`
-	}
-
-	readme += `
-## Customization
-
-1. Edit ` + "`docker.pkr.hcl`" + ` to add your provisioning steps
-2. Modify ` + "`variables.pkr.hcl`" + ` to adjust defaults
-3. Update this README with your specific requirements
-
----
-
-## Notes
-
-- Multi-arch Docker images (` + "`amd64`" + ` + ` + "`arm64`" + `) are built by default
-- Customize provisioning in the ` + "`provisioner`" + ` blocks
-- Images are suitable for CI, local testing, or deployment
-`
-
-	return readme
-}

@@ -1,0 +1,78 @@
+# Packer Build for {{.Title}}
+
+{{.Description}}
+
+---
+
+## Requirements
+
+- [Packer](https://www.packer.io/)
+- Docker (for building Docker images)
+{{- if .IncludeAMI}}
+- AWS account & credentials (for AMI builds)
+{{- end}}
+- Required Packer plugins:
+  - `docker`
+{{- if .IncludeAMI}}
+  - `amazon`
+  - `ansible` (optional, for complex provisioning)
+{{- end}}
+
+---
+
+## Variables
+
+See `variables.pkr.hcl` for all configurable parameters.
+
+Key variables:
+- `template_name`: Name of the template (default: `{{.TemplateName}}`)
+- `base_image`: Base Docker image (default: `{{.BaseImage}}`)
+- `base_image_version`: Version of the base image (default: `latest`)
+{{- if .IncludeAMI}}
+- `ami_region`: AWS region for AMI creation (default: `us-east-1`)
+{{- end}}
+
+---
+
+## Building Docker Images
+
+Initialize the template:
+
+```bash
+export TASK_X_REMOTE_TASKFILES=1
+task -y template-init TEMPLATE_NAME={{.TemplateName}}
+```
+
+Build the images:
+
+```bash
+export TASK_X_REMOTE_TASKFILES=1
+task -y template-build TEMPLATE_NAME={{.TemplateName}} ONLY='{{.TemplateName}}-docker.docker.*'
+```
+
+---
+{{if .IncludeAMI}}
+## Building AWS AMIs
+
+```bash
+export TASK_X_REMOTE_TASKFILES=1
+task -y template-build TEMPLATE_NAME={{.TemplateName}} ONLY='{{.TemplateName}}-ami.amazon-ebs.*'
+```
+
+> 🛡️ Ensure your AWS credentials are configured.
+
+---
+{{end}}
+## Customization
+
+1. Edit `docker.pkr.hcl` to add your provisioning steps
+2. Modify `variables.pkr.hcl` to adjust defaults
+3. Update this README with your specific requirements
+
+---
+
+## Notes
+
+- Multi-arch Docker images (`amd64` + `arm64`) are built by default
+- Customize provisioning in the `provisioner` blocks
+- Images are suitable for CI, local testing, or deployment
