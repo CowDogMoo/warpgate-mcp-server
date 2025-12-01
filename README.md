@@ -138,6 +138,35 @@ Lists all available Packer templates in the repository.
 }
 ```
 
+#### `create_template`
+Create a new Packer template with all required files and structure.
+
+**Parameters:**
+- `template_name` (string, required): Name of the new template (e.g., 'my-awesome-template')
+- `description` (string, required): Brief description of what this template creates
+- `base_image` (string, optional): Base Docker image to use (default: 'ubuntu')
+- `base_image_version` (string, optional): Version of the base image (default: 'latest')
+- `include_ami` (boolean, optional): Include AWS AMI configuration (default: false)
+
+**Example:**
+```json
+{
+  "template_name": "security-toolkit",
+  "description": "A comprehensive security testing toolkit with common tools",
+  "base_image": "kalilinux/kali-rolling",
+  "base_image_version": "latest",
+  "include_ami": true
+}
+```
+
+Creates:
+- `plugins.pkr.hcl` - Packer plugin requirements
+- `locals.pkr.hcl` - Local variables
+- `variables.pkr.hcl` - Template variables
+- `docker.pkr.hcl` - Docker build configuration
+- `ami.pkr.hcl` - AWS AMI configuration (if include_ami is true)
+- `README.md` - Template documentation
+
 #### `get_template_info`
 Get detailed information about a specific template.
 
@@ -198,7 +227,16 @@ Run the GitHub Actions image-builder workflow locally using act.
 
 ## Common Workflows
 
-### Build a Template Locally
+### Create a New Template
+
+```
+1. create_template - Create a new template with scaffolding
+2. init_template - Initialize Packer plugins
+3. validate_template - Check for errors
+4. build_template - Build the image
+```
+
+### Build an Existing Template
 
 ```
 1. list_templates - See available templates
