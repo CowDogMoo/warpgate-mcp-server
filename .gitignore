@@ -41,3 +41,6 @@ temp/
 # Build artifacts
 dist/
 build/
+
+# Task cache
+.task/
