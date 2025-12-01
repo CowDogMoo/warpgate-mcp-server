@@ -221,3 +221,65 @@ tasks:
     cmds:
       - task: install-go-pc-deps
       - task: run-pre-commit
+
+  # Install MCP server configuration for Claude Code
+  install-mcp:
+    desc: "Install the MCP server and configure it for Claude Code (if not already configured)"
+    deps: [install]
+    cmds:
+      - |
+        echo "Configuring warpgate-mcp-server for Claude Code..."
+
+        CONFIG_FILE="$HOME/Library/Application Support/Claude/claude_desktop_config.json"
+        BINARY_PATH="$(go env GOPATH)/bin/{{.BINARY_NAME}}"
+        WARPGATE_PATH="$HOME/cowdogmoo/warpgate"
+
+        # Check if binary exists
+        if [ ! -f "$BINARY_PATH" ]; then
+          echo "Error: Binary not found at $BINARY_PATH"
+          echo "Run 'task install' first"
+          exit 1
+        fi
+
+        # Create config directory if it doesn't exist
+        mkdir -p "$(dirname "$CONFIG_FILE")"
+
+        # Check if config file exists, create if not
+        if [ ! -f "$CONFIG_FILE" ]; then
+          echo '{"mcpServers":{}}' > "$CONFIG_FILE"
+          echo "Created new config file at $CONFIG_FILE"
+        fi
+
+        # Check if warpgate-mcp-server is already configured
+        if grep -q '"warpgate"' "$CONFIG_FILE"; then
+          echo "✓ warpgate-mcp-server is already configured in Claude Code"
+          echo "Configuration file: $CONFIG_FILE"
+          exit 0
+        fi
+
+        # Add the MCP server configuration using jq
+        if ! command -v jq &> /dev/null; then
+          echo "Error: jq is required but not installed"
+          echo "Install with: brew install jq"
+          exit 1
+        fi
+
+        # Backup existing config
+        cp "$CONFIG_FILE" "$CONFIG_FILE.backup"
+
+        # Add warpgate MCP server configuration
+        jq --arg cmd "$BINARY_PATH" --arg path "$WARPGATE_PATH" \
+          '.mcpServers.warpgate = {
+            "command": $cmd,
+            "args": [],
+            "env": {
+              "WARPGATE_PATH": $path
+            }
+          }' "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+
+        echo "✓ Successfully configured warpgate-mcp-server for Claude Code"
+        echo "Configuration file: $CONFIG_FILE"
+        echo "Binary path: $BINARY_PATH"
+        echo "Warpgate path: $WARPGATE_PATH"
+        echo ""
+        echo "Please restart Claude Code for changes to take effect."
