@@ -13,6 +13,7 @@ func RegisterTools(s *server.MCPServer, logger *logging.Logger, warpgatePath str
 	// Template management tools
 	listTemplates(s, logger, warpgatePath)
 	getTemplateInfo(s, logger, warpgatePath)
+	createTemplate(s, logger, warpgatePath)
 	initTemplate(s, logger, warpgatePath)
 	validateTemplate(s, logger, warpgatePath)
 	buildTemplate(s, logger, warpgatePath)
