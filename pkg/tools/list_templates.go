@@ -17,10 +17,16 @@ import (
 func listTemplates(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
 	tool := mcp.Tool{
 		Name:        "list_templates",
-		Description: "List all available Packer templates in the Warpgate repository",
+		Description: "List available warpgate templates from all configured sources",
 		InputSchema: mcp.ToolInputSchema{
-			Type:       "object",
-			Properties: map[string]interface{}{},
+			Type: "object",
+			Properties: map[string]interface{}{
+				"source": map[string]interface{}{
+					"type":        "string",
+					"description": "Filter by source (all, local, git, or specific repo name)",
+					"default":     "all",
+				},
+			},
 		},
 	}
 
@@ -31,16 +37,30 @@ func listTemplates(s *server.MCPServer, logger *logging.Logger, warpgatePath str
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to create Warpgate client: %v", err)), nil
 		}
 
-		templates, err := wg.ListTemplates()
+		// Parse source parameter
+		source := "all"
+		if request.Params.Arguments != nil {
+			if sourceArg, ok := request.Params.Arguments["source"].(string); ok {
+				source = sourceArg
+			}
+		}
+
+		var templates []client.TemplateInfo
+		if source == "all" {
+			templates, err = wg.ListTemplates()
+		} else {
+			templates, err = wg.ListTemplatesFromSource(source)
+		}
+
 		if err != nil {
 			logger.Errorf("Failed to list templates: %v", err)
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to list templates: %v", err)), nil
 		}
 
 		result := map[string]interface{}{
-			"templates":    templates,
-			"count":        len(templates),
-			"repo_path":    wg.GetRepoPath(),
+			"templates": templates,
+			"count":     len(templates),
+			"source":    source,
 		}
 
 		resultJSON, err := json.MarshalIndent(result, "", "  ")
