@@ -13,12 +13,11 @@ func RegisterTools(s *server.MCPServer, logger *logging.Logger, warpgatePath str
 	// Template management tools
 	listTemplates(s, logger, warpgatePath)
 	getTemplateInfo(s, logger, warpgatePath)
-	createTemplate(s, logger, warpgatePath)
 	initTemplate(s, logger, warpgatePath)
 	validateTemplate(s, logger, warpgatePath)
 	buildTemplate(s, logger, warpgatePath)
 
-	// Workflow tools
+	// Workflow tools (kept for backward compatibility)
 	listTasks(s, logger, warpgatePath)
 	runTask(s, logger, warpgatePath)
 	runPreCommit(s, logger, warpgatePath)

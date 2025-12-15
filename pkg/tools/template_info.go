@@ -17,23 +17,23 @@ import (
 func getTemplateInfo(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
 	tool := mcp.Tool{
 		Name:        "get_template_info",
-		Description: "Get detailed information about a specific Packer template",
+		Description: "Get detailed information about a specific warpgate template",
 		InputSchema: mcp.ToolInputSchema{
 			Type: "object",
 			Properties: map[string]interface{}{
-				"template_name": map[string]interface{}{
+				"template": map[string]interface{}{
 					"type":        "string",
-					"description": "Name of the template (e.g., attack-box, sliver, atomic-red-team)",
+					"description": "Template name or path to warpgate.yaml",
 				},
 			},
-			Required: []string{"template_name"},
+			Required: []string{"template"},
 		},
 	}
 
 	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		templateName, ok := request.Params.Arguments["template_name"].(string)
+		template, ok := request.Params.Arguments["template"].(string)
 		if !ok {
-			return mcp.NewToolResultError("template_name must be a string"), nil
+			return mcp.NewToolResultError("template must be a string"), nil
 		}
 
 		wg, err := client.NewWarpgateClient(warpgatePath)
@@ -42,7 +42,7 @@ func getTemplateInfo(s *server.MCPServer, logger *logging.Logger, warpgatePath s
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to create Warpgate client: %v", err)), nil
 		}
 
-		info, err := wg.GetTemplateInfo(templateName)
+		info, err := wg.GetTemplateInfo(template)
 		if err != nil {
 			logger.Errorf("Failed to get template info: %v", err)
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to get template info: %v", err)), nil
