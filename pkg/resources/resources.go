@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 
@@ -18,16 +19,18 @@ import (
 
 // RegisterResources registers all available resources with the MCP server
 func RegisterResources(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
-	taskfileResource(s, logger, warpgatePath)
-	templateReadmeResource(s, logger, warpgatePath)
+	warpgateConfigResource(s, logger, warpgatePath)
+	templateSchemaResource(s, logger, warpgatePath)
+	exampleTemplateResource(s, logger, warpgatePath)
 }
 
-func taskfileResource(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
+// warpgateConfigResource exposes the warpgate configuration
+func warpgateConfigResource(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
 	resource := mcp.Resource{
-		URI:         "warpgate://taskfile",
-		Name:        "Warpgate Taskfile",
-		Description: "The main Taskfile.yaml configuration for Warpgate",
-		MIMEType:    "text/yaml",
+		URI:         "warpgate://config",
+		Name:        "Warpgate Configuration",
+		Description: "Global warpgate configuration from ~/.config/warpgate/config.yaml",
+		MIMEType:    "application/yaml",
 	}
 
 	handler := func(ctx context.Context, request mcp.ReadResourceRequest) ([]interface{}, error) {
@@ -37,17 +40,22 @@ func taskfileResource(s *server.MCPServer, logger *logging.Logger, warpgatePath 
 			return nil, fmt.Errorf("failed to create Warpgate client: %w", err)
 		}
 
-		taskfilePath := filepath.Join(wg.GetRepoPath(), "Taskfile.yaml")
-		content, err := os.ReadFile(taskfilePath)
+		config, err := wg.GetWarpgateConfig()
 		if err != nil {
-			logger.Errorf("Failed to read Taskfile: %v", err)
-			return nil, fmt.Errorf("failed to read Taskfile: %w", err)
+			logger.Errorf("Failed to get warpgate config: %v", err)
+			return nil, fmt.Errorf("failed to get warpgate config: %w", err)
+		}
+
+		// Convert config to JSON for better readability
+		configJSON, err := json.MarshalIndent(config, "", "  ")
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal config: %w", err)
 		}
 
 		return []interface{}{
 			mcp.TextContent{
 				Type: "text",
-				Text: string(content),
+				Text: string(configJSON),
 			},
 		}, nil
 	}
@@ -55,43 +63,108 @@ func taskfileResource(s *server.MCPServer, logger *logging.Logger, warpgatePath 
 	s.AddResource(resource, handler)
 }
 
-func templateReadmeResource(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
+// templateSchemaResource exposes the warpgate template JSON schema
+func templateSchemaResource(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
 	resource := mcp.Resource{
-		URI:         "warpgate://template/{name}/readme",
-		Name:        "Template README",
-		Description: "README.md for a specific template",
-		MIMEType:    "text/markdown",
+		URI:         "warpgate://schema/template",
+		Name:        "Warpgate Template Schema",
+		Description: "JSON schema for warpgate.yaml template files",
+		MIMEType:    "application/json",
 	}
 
 	handler := func(ctx context.Context, request mcp.ReadResourceRequest) ([]interface{}, error) {
-		// This is a template resource, actual handling would need the template name
-		// For now, return a list of available templates
-		wg, err := client.NewWarpgateClient(warpgatePath)
+		// Fetch the schema from the warpgate repository
+		schemaURL := "https://raw.githubusercontent.com/cowdogmoo/warpgate/main/schema/warpgate-template.json"
+
+		resp, err := http.Get(schemaURL)
 		if err != nil {
-			logger.Errorf("Failed to create Warpgate client: %v", err)
-			return nil, fmt.Errorf("failed to create Warpgate client: %w", err)
+			logger.Errorf("Failed to fetch schema: %v", err)
+			return nil, fmt.Errorf("failed to fetch schema: %w", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("failed to fetch schema: HTTP %d", resp.StatusCode)
 		}
 
-		templates, err := wg.ListTemplates()
-		if err != nil {
-			logger.Errorf("Failed to list templates: %v", err)
-			return nil, fmt.Errorf("failed to list templates: %w", err)
+		var schema interface{}
+		if err := json.NewDecoder(resp.Body).Decode(&schema); err != nil {
+			return nil, fmt.Errorf("failed to decode schema: %w", err)
 		}
 
-		result := map[string]interface{}{
-			"message":   "To access a template README, use URI: warpgate://template/<name>/readme",
-			"available": templates,
-		}
-
-		resultJSON, err := json.MarshalIndent(result, "", "  ")
+		schemaJSON, err := json.MarshalIndent(schema, "", "  ")
 		if err != nil {
-			return nil, fmt.Errorf("failed to marshal result: %w", err)
+			return nil, fmt.Errorf("failed to marshal schema: %w", err)
 		}
 
 		return []interface{}{
 			mcp.TextContent{
 				Type: "text",
-				Text: string(resultJSON),
+				Text: string(schemaJSON),
+			},
+		}, nil
+	}
+
+	s.AddResource(resource, handler)
+}
+
+// exampleTemplateResource exposes the example warpgate.yaml
+func exampleTemplateResource(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
+	resource := mcp.Resource{
+		URI:         "warpgate://examples/template",
+		Name:        "Example Warpgate Template",
+		Description: "Example warpgate.yaml demonstrating the template format",
+		MIMEType:    "application/yaml",
+	}
+
+	handler := func(ctx context.Context, request mcp.ReadResourceRequest) ([]interface{}, error) {
+		// Try to read the example file from the MCP server repository
+		examplePath := filepath.Join(warpgatePath, "..", "warpgate-mcp-server", "examples", "warpgate.yaml")
+
+		// If that doesn't exist, try relative to current directory
+		if _, err := os.Stat(examplePath); os.IsNotExist(err) {
+			examplePath = "examples/warpgate.yaml"
+		}
+
+		content, err := os.ReadFile(examplePath)
+		if err != nil {
+			logger.Warnf("Failed to read example template: %v", err)
+			// Return a minimal example if file doesn't exist
+			content = []byte(`---
+# Example warpgate template
+metadata:
+  name: example-template
+  version: 1.0.0
+  description: Example warpgate template
+
+name: example-app
+version: latest
+
+base:
+  image: ubuntu:22.04
+
+provisioners:
+  - type: shell
+    inline:
+      - apt-get update
+      - apt-get install -y curl
+
+targets:
+  - type: container
+    registry: ghcr.io/myorg
+    tags:
+      - latest
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    push: false
+`)
+		}
+
+		return []interface{}{
+			mcp.TextContent{
+				Type: "text",
+				Text: string(content),
 			},
 		}, nil
 	}

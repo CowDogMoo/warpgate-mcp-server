@@ -26,10 +26,4 @@ func RegisterTools(s *server.MCPServer, logger *logging.Logger, warpgatePath str
 	// Build and conversion tools
 	convertPackerTemplate(s, logger, warpgatePath)
 	createManifest(s, logger, warpgatePath)
-
-	// Workflow tools (kept for backward compatibility)
-	listTasks(s, logger, warpgatePath)
-	runTask(s, logger, warpgatePath)
-	runPreCommit(s, logger, warpgatePath)
-	runImageBuilder(s, logger, warpgatePath)
 }
