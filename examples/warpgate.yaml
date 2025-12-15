@@ -1,0 +1,112 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/cowdogmoo/warpgate/main/schema/warpgate-template.json
+
+# Example warpgate template for the MCP server
+# This demonstrates the new warpgate.yaml format that replaces Packer HCL
+
+metadata:
+  name: example-mcp-template
+  version: 1.0.0
+  description: Example warpgate template demonstrating the new format
+  author: CowDogMoo
+  license: MIT
+  tags:
+    - example
+    - demo
+    - mcp
+  requires:
+    warpgate: ">=1.0.0"
+  changelog:
+    - version: 1.0.0
+      date: "2025-12-14"
+      changes:
+        - Initial release
+        - Demonstrates warpgate.yaml format
+
+# Image configuration
+name: example-app
+version: latest
+
+# Base image configuration
+base:
+  image: ubuntu:22.04
+  pull: true
+  env:
+    DEBIAN_FRONTEND: noninteractive
+    APP_ENV: production
+
+# Provisioners - commands to run during image build
+provisioners:
+  - type: shell
+    inline:
+      - apt-get update
+      - apt-get install -y curl wget git vim
+      - echo "Base tools installed"
+
+  - type: shell
+    inline:
+      - useradd -m -s /bin/bash appuser
+      - mkdir -p /app
+      - chown appuser:appuser /app
+
+  # Example: Using a script file
+  # - type: script
+  #   path: ./scripts/setup.sh
+
+  # Example: Using Ansible
+  # - type: ansible
+  #   playbook_path: ./playbooks/main.yml
+  #   galaxy_file: requirements.yml
+
+# Build targets - where to publish the built images
+targets:
+  - type: container
+    registry: ghcr.io/cowdogmoo
+    tags:
+      - latest
+      - "{{.Version}}"
+      - "v1.0.0"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    push: false  # Set to true to push to registry
+
+  # Example: AWS AMI target
+  # - type: ami
+  #   region: us-east-1
+  #   instance_type: t3.medium
+  #   architecture: x86_64
+
+# Optional: Architecture-specific overrides
+# arch_overrides:
+#   arm64:
+#     base:
+#       image: ubuntu:22.04
+#     provisioners:
+#       - type: shell
+#         inline:
+#           - echo "ARM64-specific setup"
+
+# Optional: Variables that can be overridden at build time
+variables:
+  APP_VERSION:
+    type: string
+    default: "1.0.0"
+    description: "Application version"
+
+  INSTALL_PATH:
+    type: string
+    default: "/app"
+    description: "Installation directory"
+
+  ENABLE_DEBUG:
+    type: bool
+    default: false
+    description: "Enable debug mode"
+
+# Optional: Post-provisioning changes (Dockerfile-style)
+# post_changes:
+#   - WORKDIR /app
+#   - USER appuser
+#   - EXPOSE 8080
+#   - CMD ["./app"]
