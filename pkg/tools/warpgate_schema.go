@@ -87,11 +87,15 @@ func warpgateSchemaValidate(s *server.MCPServer, _ *logging.Logger, warpgatePath
 	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var configPath string
 
-		if path, ok := request.Params.Arguments["config_path"].(string); ok && path != "" {
+		path := request.GetString("config_path", "")
+		dir := request.GetString("template_dir", "")
+
+		switch {
+		case path != "":
 			configPath = path
-		} else if dir, ok := request.Params.Arguments["template_dir"].(string); ok && dir != "" {
+		case dir != "":
 			configPath = filepath.Join(dir, "warpgate.yaml")
-		} else {
+		default:
 			return mcp.NewToolResultError("either config_path or template_dir is required"), nil
 		}
 

@@ -76,8 +76,8 @@ func warpgateBuild(s *server.MCPServer, logger *logging.Logger, warpgatePath str
 	}
 
 	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		template, ok := request.Params.Arguments["template"].(string)
-		if !ok || template == "" {
+		template := request.GetString("template", "")
+		if template == "" {
 			return mcp.NewToolResultError("template is required and must be a string"), nil
 		}
 
@@ -92,55 +92,26 @@ func warpgateBuild(s *server.MCPServer, logger *logging.Logger, warpgatePath str
 		}
 
 		// Build options
-		opts := client.BuildOptions{}
-
-		if target, ok := request.Params.Arguments["target"].(string); ok {
-			opts.Target = target
+		opts := client.BuildOptions{
+			Target:        request.GetString("target", ""),
+			Architectures: request.GetStringSlice("architectures", nil),
+			Push:          request.GetBool("push", false),
+			Registry:      request.GetString("registry", ""),
+			Tags:          request.GetStringSlice("tags", nil),
+			NoCache:       request.GetBool("no_cache", false),
+			SaveDigests:   request.GetBool("save_digests", false),
+			DigestDir:     request.GetString("digest_dir", ""),
 		}
 
-		if archs, ok := request.Params.Arguments["architectures"].([]interface{}); ok {
-			for _, arch := range archs {
-				if a, ok := arch.(string); ok {
-					opts.Architectures = append(opts.Architectures, a)
-				}
-			}
-		}
-
-		if push, ok := request.Params.Arguments["push"].(bool); ok {
-			opts.Push = push
-		}
-
-		if registry, ok := request.Params.Arguments["registry"].(string); ok {
-			opts.Registry = registry
-		}
-
-		if vars, ok := request.Params.Arguments["vars"].(map[string]interface{}); ok {
+		// Handle vars map separately since it needs conversion
+		args := request.GetArguments()
+		if vars, ok := args["vars"].(map[string]interface{}); ok {
 			opts.Vars = make(map[string]string)
 			for k, v := range vars {
 				if val, ok := v.(string); ok {
 					opts.Vars[k] = val
 				}
 			}
-		}
-
-		if tags, ok := request.Params.Arguments["tags"].([]interface{}); ok {
-			for _, tag := range tags {
-				if t, ok := tag.(string); ok {
-					opts.Tags = append(opts.Tags, t)
-				}
-			}
-		}
-
-		if noCache, ok := request.Params.Arguments["no_cache"].(bool); ok {
-			opts.NoCache = noCache
-		}
-
-		if saveDigests, ok := request.Params.Arguments["save_digests"].(bool); ok {
-			opts.SaveDigests = saveDigests
-		}
-
-		if digestDir, ok := request.Params.Arguments["digest_dir"].(string); ok {
-			opts.DigestDir = digestDir
 		}
 
 		output, err := wg.WarpgateBuild(template, opts)

@@ -75,8 +75,8 @@ func runTask(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
 	}
 
 	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		taskName, ok := request.Params.Arguments["task_name"].(string)
-		if !ok {
+		taskName := request.GetString("task_name", "")
+		if taskName == "" {
 			return mcp.NewToolResultError("task_name must be a string"), nil
 		}
 
@@ -87,7 +87,8 @@ func runTask(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
 		}
 
 		taskArgs := make(map[string]string)
-		if argsMap, ok := request.Params.Arguments["args"].(map[string]interface{}); ok {
+		args := request.GetArguments()
+		if argsMap, ok := args["args"].(map[string]interface{}); ok {
 			for k, v := range argsMap {
 				taskArgs[k] = fmt.Sprintf("%v", v)
 			}
@@ -128,7 +129,7 @@ func runImageBuilder(s *server.MCPServer, logger *logging.Logger, warpgatePath s
 		}
 
 		taskArgs := make(map[string]string)
-		if template, ok := request.Params.Arguments["template"].(string); ok && template != "" {
+		if template := request.GetString("template", ""); template != "" {
 			taskArgs["TEMPLATE"] = template
 		}
 

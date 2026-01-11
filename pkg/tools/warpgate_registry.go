@@ -42,13 +42,13 @@ func warpgateRegistryList(s *server.MCPServer, logger *logging.Logger, warpgateP
 	}
 
 	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		name, ok := request.Params.Arguments["name"].(string)
-		if !ok || name == "" {
+		name := request.GetString("name", "")
+		if name == "" {
 			return mcp.NewToolResultError("name is required and must be a string"), nil
 		}
 
-		registry, ok := request.Params.Arguments["registry"].(string)
-		if !ok || registry == "" {
+		registry := request.GetString("registry", "")
+		if registry == "" {
 			return mcp.NewToolResultError("registry is required and must be a string"), nil
 		}
 
@@ -63,16 +63,10 @@ func warpgateRegistryList(s *server.MCPServer, logger *logging.Logger, warpgateP
 		}
 
 		opts := client.ManifestsListOptions{
-			Name:     name,
-			Registry: registry,
-		}
-
-		if namespace, ok := request.Params.Arguments["namespace"].(string); ok {
-			opts.Namespace = namespace
-		}
-
-		if authFile, ok := request.Params.Arguments["auth_file"].(string); ok {
-			opts.AuthFile = authFile
+			Name:      name,
+			Registry:  registry,
+			Namespace: request.GetString("namespace", ""),
+			AuthFile:  request.GetString("auth_file", ""),
 		}
 
 		output, err := wg.WarpgateManifestsList(opts)
@@ -123,13 +117,13 @@ func warpgateRegistryInspect(s *server.MCPServer, logger *logging.Logger, warpga
 	}
 
 	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		name, ok := request.Params.Arguments["name"].(string)
-		if !ok || name == "" {
+		name := request.GetString("name", "")
+		if name == "" {
 			return mcp.NewToolResultError("name is required and must be a string"), nil
 		}
 
-		registry, ok := request.Params.Arguments["registry"].(string)
-		if !ok || registry == "" {
+		registry := request.GetString("registry", "")
+		if registry == "" {
 			return mcp.NewToolResultError("registry is required and must be a string"), nil
 		}
 
@@ -144,24 +138,11 @@ func warpgateRegistryInspect(s *server.MCPServer, logger *logging.Logger, warpga
 		}
 
 		opts := client.ManifestsInspectOptions{
-			Name:     name,
-			Registry: registry,
-		}
-
-		if tags, ok := request.Params.Arguments["tags"].([]interface{}); ok {
-			for _, tag := range tags {
-				if t, ok := tag.(string); ok {
-					opts.Tags = append(opts.Tags, t)
-				}
-			}
-		}
-
-		if namespace, ok := request.Params.Arguments["namespace"].(string); ok {
-			opts.Namespace = namespace
-		}
-
-		if authFile, ok := request.Params.Arguments["auth_file"].(string); ok {
-			opts.AuthFile = authFile
+			Name:      name,
+			Registry:  registry,
+			Tags:      request.GetStringSlice("tags", nil),
+			Namespace: request.GetString("namespace", ""),
+			AuthFile:  request.GetString("auth_file", ""),
 		}
 
 		output, err := wg.WarpgateManifestsInspect(opts)
@@ -216,26 +197,19 @@ func warpgateRegistryDelete(s *server.MCPServer, logger *logging.Logger, warpgat
 	}
 
 	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		name, ok := request.Params.Arguments["name"].(string)
-		if !ok || name == "" {
+		name := request.GetString("name", "")
+		if name == "" {
 			return mcp.NewToolResultError("name is required and must be a string"), nil
 		}
 
-		registry, ok := request.Params.Arguments["registry"].(string)
-		if !ok || registry == "" {
+		registry := request.GetString("registry", "")
+		if registry == "" {
 			return mcp.NewToolResultError("registry is required and must be a string"), nil
 		}
 
-		tagsRaw, ok := request.Params.Arguments["tags"].([]interface{})
-		if !ok || len(tagsRaw) == 0 {
+		tags := request.GetStringSlice("tags", nil)
+		if len(tags) == 0 {
 			return mcp.NewToolResultError("tags is required and must be a non-empty array"), nil
-		}
-
-		var tags []string
-		for _, t := range tagsRaw {
-			if tag, ok := t.(string); ok {
-				tags = append(tags, tag)
-			}
 		}
 
 		wg, err := client.NewWarpgateClient(warpgatePath)
@@ -245,21 +219,12 @@ func warpgateRegistryDelete(s *server.MCPServer, logger *logging.Logger, warpgat
 		}
 
 		opts := client.RegistryDeleteOptions{
-			Name:     name,
-			Registry: registry,
-			Tags:     tags,
-		}
-
-		if namespace, ok := request.Params.Arguments["namespace"].(string); ok {
-			opts.Namespace = namespace
-		}
-
-		if authFile, ok := request.Params.Arguments["auth_file"].(string); ok {
-			opts.AuthFile = authFile
-		}
-
-		if dryRun, ok := request.Params.Arguments["dry_run"].(bool); ok {
-			opts.DryRun = dryRun
+			Name:      name,
+			Registry:  registry,
+			Tags:      tags,
+			Namespace: request.GetString("namespace", ""),
+			AuthFile:  request.GetString("auth_file", ""),
+			DryRun:    request.GetBool("dry_run", false),
 		}
 
 		output, err := wg.RegistryDelete(opts)
@@ -311,13 +276,13 @@ func warpgateRegistryCopy(s *server.MCPServer, logger *logging.Logger, warpgateP
 	}
 
 	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		sourceImage, ok := request.Params.Arguments["source_image"].(string)
-		if !ok || sourceImage == "" {
+		sourceImage := request.GetString("source_image", "")
+		if sourceImage == "" {
 			return mcp.NewToolResultError("source_image is required and must be a string"), nil
 		}
 
-		destImage, ok := request.Params.Arguments["dest_image"].(string)
-		if !ok || destImage == "" {
+		destImage := request.GetString("dest_image", "")
+		if destImage == "" {
 			return mcp.NewToolResultError("dest_image is required and must be a string"), nil
 		}
 
@@ -328,24 +293,12 @@ func warpgateRegistryCopy(s *server.MCPServer, logger *logging.Logger, warpgateP
 		}
 
 		opts := client.RegistryCopyOptions{
-			SourceImage: sourceImage,
-			DestImage:   destImage,
-		}
-
-		if sourceAuth, ok := request.Params.Arguments["source_auth"].(string); ok {
-			opts.SourceAuth = sourceAuth
-		}
-
-		if destAuth, ok := request.Params.Arguments["dest_auth"].(string); ok {
-			opts.DestAuth = destAuth
-		}
-
-		if allTags, ok := request.Params.Arguments["all_tags"].(bool); ok {
-			opts.AllTags = allTags
-		}
-
-		if preserveDigests, ok := request.Params.Arguments["preserve_digests"].(bool); ok {
-			opts.PreserveDigests = preserveDigests
+			SourceImage:     sourceImage,
+			DestImage:       destImage,
+			SourceAuth:      request.GetString("source_auth", ""),
+			DestAuth:        request.GetString("dest_auth", ""),
+			AllTags:         request.GetBool("all_tags", false),
+			PreserveDigests: request.GetBool("preserve_digests", false),
 		}
 
 		output, err := wg.RegistryCopy(opts)

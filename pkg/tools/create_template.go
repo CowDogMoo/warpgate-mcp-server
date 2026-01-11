@@ -72,9 +72,15 @@ func createTemplate(s *server.MCPServer, logger *logging.Logger, warpgatePath st
 	}
 
 	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		args := request.Params.Arguments
-		templateName := args["template_name"].(string)
-		description := args["description"].(string)
+		templateName := request.GetString("template_name", "")
+		description := request.GetString("description", "")
+
+		if templateName == "" {
+			return mcp.NewToolResultError("template_name is required"), nil
+		}
+		if description == "" {
+			return mcp.NewToolResultError("description is required"), nil
+		}
 
 		// Validate template name
 		if !isValidTemplateName(templateName) {
@@ -83,29 +89,10 @@ func createTemplate(s *server.MCPServer, logger *logging.Logger, warpgatePath st
 		}
 
 		// Set defaults
-		baseImage := "ubuntu"
-		if val, ok := args["base_image"].(string); ok && val != "" {
-			baseImage = val
-		}
-
-		baseImageVersion := "22.04"
-		if val, ok := args["base_image_version"].(string); ok && val != "" {
-			baseImageVersion = val
-		}
-
-		includeAMI := false
-		if val, ok := args["include_ami"].(bool); ok {
-			includeAMI = val
-		}
-
-		var platforms []string
-		if val, ok := args["platforms"].([]interface{}); ok {
-			for _, p := range val {
-				if ps, ok := p.(string); ok {
-					platforms = append(platforms, ps)
-				}
-			}
-		}
+		baseImage := request.GetString("base_image", "ubuntu")
+		baseImageVersion := request.GetString("base_image_version", "22.04")
+		includeAMI := request.GetBool("include_ami", false)
+		platforms := request.GetStringSlice("platforms", nil)
 
 		// Create template directory
 		templateDir := filepath.Join(warpgatePath, "templates", templateName)

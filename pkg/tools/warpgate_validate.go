@@ -34,8 +34,8 @@ func warpgateValidate(s *server.MCPServer, logger *logging.Logger, warpgatePath 
 	}
 
 	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		template, ok := request.Params.Arguments["template"].(string)
-		if !ok || template == "" {
+		template := request.GetString("template", "")
+		if template == "" {
 			return mcp.NewToolResultError("template is required and must be a string"), nil
 		}
 
@@ -49,10 +49,7 @@ func warpgateValidate(s *server.MCPServer, logger *logging.Logger, warpgatePath 
 			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 1.0.0"), nil
 		}
 
-		syntaxOnly := false
-		if val, ok := request.Params.Arguments["syntax_only"].(bool); ok {
-			syntaxOnly = val
-		}
+		syntaxOnly := request.GetBool("syntax_only", false)
 
 		output, err := wg.WarpgateValidate(template, syntaxOnly)
 		if err != nil {

@@ -38,8 +38,8 @@ func warpgateInit(s *server.MCPServer, logger *logging.Logger, warpgatePath stri
 	}
 
 	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		name, ok := request.Params.Arguments["name"].(string)
-		if !ok || name == "" {
+		name := request.GetString("name", "")
+		if name == "" {
 			return mcp.NewToolResultError("name is required and must be a string"), nil
 		}
 
@@ -53,14 +53,9 @@ func warpgateInit(s *server.MCPServer, logger *logging.Logger, warpgatePath stri
 			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 1.0.0"), nil
 		}
 
-		opts := client.InitOptions{}
-
-		if output, ok := request.Params.Arguments["output"].(string); ok {
-			opts.OutputDir = output
-		}
-
-		if from, ok := request.Params.Arguments["from"].(string); ok {
-			opts.FromTemplate = from
+		opts := client.InitOptions{
+			OutputDir:    request.GetString("output", ""),
+			FromTemplate: request.GetString("from", ""),
 		}
 
 		output, err := wg.WarpgateInit(name, opts)

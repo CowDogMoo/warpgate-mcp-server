@@ -46,15 +46,8 @@ func warpgateTemplatesList(s *server.MCPServer, logger *logging.Logger, warpgate
 			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 1.0.0"), nil
 		}
 
-		source := ""
-		if val, ok := request.Params.Arguments["source"].(string); ok {
-			source = val
-		}
-
-		format := ""
-		if val, ok := request.Params.Arguments["format"].(string); ok {
-			format = val
-		}
+		source := request.GetString("source", "")
+		format := request.GetString("format", "")
 
 		output, err := wg.WarpgateTemplatesList(source, format)
 		if err != nil {
@@ -85,8 +78,8 @@ func warpgateTemplatesInfo(s *server.MCPServer, logger *logging.Logger, warpgate
 	}
 
 	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		template, ok := request.Params.Arguments["template"].(string)
-		if !ok || template == "" {
+		template := request.GetString("template", "")
+		if template == "" {
 			return mcp.NewToolResultError("template is required and must be a string"), nil
 		}
 
@@ -133,8 +126,8 @@ func warpgateTemplatesAdd(s *server.MCPServer, logger *logging.Logger, warpgateP
 	}
 
 	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		source, ok := request.Params.Arguments["source"].(string)
-		if !ok || source == "" {
+		source := request.GetString("source", "")
+		if source == "" {
 			return mcp.NewToolResultError("source is required and must be a string"), nil
 		}
 
@@ -148,10 +141,7 @@ func warpgateTemplatesAdd(s *server.MCPServer, logger *logging.Logger, warpgateP
 			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 1.0.0"), nil
 		}
 
-		name := ""
-		if val, ok := request.Params.Arguments["name"].(string); ok {
-			name = val
-		}
+		name := request.GetString("name", "")
 
 		output, err := wg.WarpgateTemplatesAdd(source, name)
 		if err != nil {
@@ -183,8 +173,8 @@ func warpgateTemplatesRemove(s *server.MCPServer, logger *logging.Logger, warpga
 	}
 
 	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		name, ok := request.Params.Arguments["name"].(string)
-		if !ok || name == "" {
+		name := request.GetString("name", "")
+		if name == "" {
 			return mcp.NewToolResultError("name is required and must be a string"), nil
 		}
 

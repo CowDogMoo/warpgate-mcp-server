@@ -39,10 +39,7 @@ func warpgateConfigGet(s *server.MCPServer, logger *logging.Logger, warpgatePath
 			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 1.0.0"), nil
 		}
 
-		key := ""
-		if val, ok := request.Params.Arguments["key"].(string); ok {
-			key = val
-		}
+		key := request.GetString("key", "")
 
 		output, err := wg.WarpgateConfigGet(key)
 		if err != nil {
@@ -77,15 +74,12 @@ func warpgateConfigSet(s *server.MCPServer, logger *logging.Logger, warpgatePath
 	}
 
 	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		key, ok := request.Params.Arguments["key"].(string)
-		if !ok || key == "" {
+		key := request.GetString("key", "")
+		if key == "" {
 			return mcp.NewToolResultError("key is required and must be a string"), nil
 		}
 
-		value, ok := request.Params.Arguments["value"].(string)
-		if !ok {
-			return mcp.NewToolResultError("value is required and must be a string"), nil
-		}
+		value := request.GetString("value", "")
 
 		wg, err := client.NewWarpgateClient(warpgatePath)
 		if err != nil {

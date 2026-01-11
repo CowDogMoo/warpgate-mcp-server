@@ -41,25 +41,14 @@ func warpgateManifestsCreate(s *server.MCPServer, logger *logging.Logger, warpga
 	}
 
 	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		name, ok := request.Params.Arguments["name"].(string)
-		if !ok || name == "" {
+		name := request.GetString("name", "")
+		if name == "" {
 			return mcp.NewToolResultError("name is required and must be a string"), nil
 		}
 
-		imagesRaw, ok := request.Params.Arguments["images"].([]interface{})
-		if !ok || len(imagesRaw) == 0 {
-			return mcp.NewToolResultError("images is required and must be a non-empty array"), nil
-		}
-
-		var images []string
-		for _, img := range imagesRaw {
-			if s, ok := img.(string); ok {
-				images = append(images, s)
-			}
-		}
-
+		images := request.GetStringSlice("images", nil)
 		if len(images) == 0 {
-			return mcp.NewToolResultError("images must contain valid string values"), nil
+			return mcp.NewToolResultError("images is required and must be a non-empty array"), nil
 		}
 
 		wg, err := client.NewWarpgateClient(warpgatePath)
@@ -72,10 +61,7 @@ func warpgateManifestsCreate(s *server.MCPServer, logger *logging.Logger, warpga
 			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 1.0.0"), nil
 		}
 
-		push := false
-		if val, ok := request.Params.Arguments["push"].(bool); ok {
-			push = val
-		}
+		push := request.GetBool("push", false)
 
 		output, err := wg.WarpgateManifestsCreate(name, images, push)
 		if err != nil {
@@ -111,8 +97,8 @@ func warpgateManifestsPush(s *server.MCPServer, logger *logging.Logger, warpgate
 	}
 
 	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		name, ok := request.Params.Arguments["name"].(string)
-		if !ok || name == "" {
+		name := request.GetString("name", "")
+		if name == "" {
 			return mcp.NewToolResultError("name is required and must be a string"), nil
 		}
 
@@ -126,10 +112,7 @@ func warpgateManifestsPush(s *server.MCPServer, logger *logging.Logger, warpgate
 			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 1.0.0"), nil
 		}
 
-		purge := false
-		if val, ok := request.Params.Arguments["purge"].(bool); ok {
-			purge = val
-		}
+		purge := request.GetBool("purge", false)
 
 		output, err := wg.WarpgateManifestsPush(name, purge)
 		if err != nil {

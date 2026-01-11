@@ -32,7 +32,7 @@ func templateReadmeResource(s *server.MCPServer, logger *logging.Logger, warpgat
 		MIMEType:    "text/markdown",
 	}
 
-	handler := func(_ context.Context, _ mcp.ReadResourceRequest) ([]interface{}, error) {
+	handler := func(_ context.Context, _ mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
 		// This is a template resource, actual handling would need the template name
 		// For now, return a list of available templates from the warpgate CLI
 		wg, err := client.NewWarpgateClient(warpgatePath)
@@ -42,10 +42,11 @@ func templateReadmeResource(s *server.MCPServer, logger *logging.Logger, warpgat
 		}
 
 		if !wg.IsCLIAvailable() {
-			return []interface{}{
-				mcp.TextContent{
-					Type: "text",
-					Text: "Warpgate CLI is not available. Please install warpgate >= 1.0.0 to list templates.",
+			return []mcp.ResourceContents{
+				mcp.TextResourceContents{
+					URI:      "warpgate://template/{name}/readme",
+					MIMEType: "text/markdown",
+					Text:     "Warpgate CLI is not available. Please install warpgate >= 1.0.0 to list templates.",
 				},
 			}, nil
 		}
@@ -62,10 +63,11 @@ func templateReadmeResource(s *server.MCPServer, logger *logging.Logger, warpgat
 Available templates (from warpgate templates list):
 %s`, templatesOutput)
 
-		return []interface{}{
-			mcp.TextContent{
-				Type: "text",
-				Text: result,
+		return []mcp.ResourceContents{
+			mcp.TextResourceContents{
+				URI:      "warpgate://template/{name}/readme",
+				MIMEType: "text/markdown",
+				Text:     result,
 			},
 		}, nil
 	}
@@ -81,7 +83,7 @@ func templateConfigResource(s *server.MCPServer, logger *logging.Logger, warpgat
 		MIMEType:    "text/yaml",
 	}
 
-	handler := func(_ context.Context, _ mcp.ReadResourceRequest) ([]interface{}, error) {
+	handler := func(_ context.Context, _ mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
 		wg, err := client.NewWarpgateClient(warpgatePath)
 		if err != nil {
 			logger.Errorf("Failed to create Warpgate client: %v", err)
@@ -89,10 +91,11 @@ func templateConfigResource(s *server.MCPServer, logger *logging.Logger, warpgat
 		}
 
 		if !wg.IsCLIAvailable() {
-			return []interface{}{
-				mcp.TextContent{
-					Type: "text",
-					Text: "Warpgate CLI is not available. Please install warpgate >= 1.0.0 to access template configs.",
+			return []mcp.ResourceContents{
+				mcp.TextResourceContents{
+					URI:      "warpgate://template/{name}/config",
+					MIMEType: "text/yaml",
+					Text:     "Warpgate CLI is not available. Please install warpgate >= 1.0.0 to access template configs.",
 				},
 			}, nil
 		}
@@ -114,18 +117,20 @@ Example templates (use warpgate_templates_list to see all):
 - atomic-red-team
 
 Error: %v`, err)
-			return []interface{}{
-				mcp.TextContent{
-					Type: "text",
-					Text: result,
+			return []mcp.ResourceContents{
+				mcp.TextResourceContents{
+					URI:      "warpgate://template/{name}/config",
+					MIMEType: "text/yaml",
+					Text:     result,
 				},
 			}, nil
 		}
 
-		return []interface{}{
-			mcp.TextContent{
-				Type: "text",
-				Text: templatesOutput,
+		return []mcp.ResourceContents{
+			mcp.TextResourceContents{
+				URI:      "warpgate://template/{name}/config",
+				MIMEType: "text/yaml",
+				Text:     templatesOutput,
 			},
 		}, nil
 	}
@@ -141,7 +146,7 @@ func warpgateConfigResource(s *server.MCPServer, logger *logging.Logger, warpgat
 		MIMEType:    "text/plain",
 	}
 
-	handler := func(_ context.Context, _ mcp.ReadResourceRequest) ([]interface{}, error) {
+	handler := func(_ context.Context, _ mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
 		wg, err := client.NewWarpgateClient(warpgatePath)
 		if err != nil {
 			logger.Errorf("Failed to create Warpgate client: %v", err)
@@ -149,10 +154,11 @@ func warpgateConfigResource(s *server.MCPServer, logger *logging.Logger, warpgat
 		}
 
 		if !wg.IsCLIAvailable() {
-			return []interface{}{
-				mcp.TextContent{
-					Type: "text",
-					Text: "Warpgate CLI is not available. Please install warpgate >= 1.0.0",
+			return []mcp.ResourceContents{
+				mcp.TextResourceContents{
+					URI:      "warpgate://config",
+					MIMEType: "text/plain",
+					Text:     "Warpgate CLI is not available. Please install warpgate >= 1.0.0",
 				},
 			}, nil
 		}
@@ -163,10 +169,11 @@ func warpgateConfigResource(s *server.MCPServer, logger *logging.Logger, warpgat
 			return nil, fmt.Errorf("failed to get warpgate config: %w", err)
 		}
 
-		return []interface{}{
-			mcp.TextContent{
-				Type: "text",
-				Text: output,
+		return []mcp.ResourceContents{
+			mcp.TextResourceContents{
+				URI:      "warpgate://config",
+				MIMEType: "text/plain",
+				Text:     output,
 			},
 		}, nil
 	}
@@ -182,7 +189,7 @@ func warpgateCLIInfoResource(s *server.MCPServer, logger *logging.Logger, warpga
 		MIMEType:    "application/json",
 	}
 
-	handler := func(_ context.Context, _ mcp.ReadResourceRequest) ([]interface{}, error) {
+	handler := func(_ context.Context, _ mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
 		wg, err := client.NewWarpgateClient(warpgatePath)
 		if err != nil {
 			logger.Errorf("Failed to create Warpgate client: %v", err)
@@ -202,10 +209,11 @@ func warpgateCLIInfoResource(s *server.MCPServer, logger *logging.Logger, warpga
 			return nil, fmt.Errorf("failed to marshal result: %w", err)
 		}
 
-		return []interface{}{
-			mcp.TextContent{
-				Type: "text",
-				Text: string(resultJSON),
+		return []mcp.ResourceContents{
+			mcp.TextResourceContents{
+				URI:      "warpgate://cli-info",
+				MIMEType: "application/json",
+				Text:     string(resultJSON),
 			},
 		}, nil
 	}
@@ -221,7 +229,7 @@ func warpgateSchemaResource(s *server.MCPServer, _ *logging.Logger, _ string) {
 		MIMEType:    "application/json",
 	}
 
-	handler := func(_ context.Context, _ mcp.ReadResourceRequest) ([]interface{}, error) {
+	handler := func(_ context.Context, _ mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
 		// Warpgate template schema based on the warpgate CLI spec
 		schema := map[string]interface{}{
 			"$schema":     "http://json-schema.org/draft-07/schema#",
@@ -352,10 +360,11 @@ func warpgateSchemaResource(s *server.MCPServer, _ *logging.Logger, _ string) {
 			return nil, fmt.Errorf("failed to marshal schema: %w", err)
 		}
 
-		return []interface{}{
-			mcp.TextContent{
-				Type: "text",
-				Text: string(resultJSON),
+		return []mcp.ResourceContents{
+			mcp.TextResourceContents{
+				URI:      "warpgate://schema/template",
+				MIMEType: "application/json",
+				Text:     string(resultJSON),
 			},
 		}, nil
 	}

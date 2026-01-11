@@ -34,8 +34,8 @@ func warpgateConvert(s *server.MCPServer, logger *logging.Logger, warpgatePath s
 	}
 
 	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		source, ok := request.Params.Arguments["source"].(string)
-		if !ok || source == "" {
+		source := request.GetString("source", "")
+		if source == "" {
 			return mcp.NewToolResultError("source is required and must be a string"), nil
 		}
 
@@ -49,10 +49,7 @@ func warpgateConvert(s *server.MCPServer, logger *logging.Logger, warpgatePath s
 			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 1.0.0"), nil
 		}
 
-		output := ""
-		if val, ok := request.Params.Arguments["output"].(string); ok {
-			output = val
-		}
+		output := request.GetString("output", "")
 
 		result, err := wg.WarpgateConvert(source, output)
 		if err != nil {
