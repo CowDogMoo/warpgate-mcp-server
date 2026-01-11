@@ -5,7 +5,6 @@ package client
 
 import (
 	"os"
-	"path/filepath"
 	"testing"
 )
 
@@ -130,22 +129,12 @@ func TestInitOptions(t *testing.T) {
 }
 
 func TestNewWarpgateClientWithValidPath(t *testing.T) {
-	// Create temp directory with Taskfile
+	// Create temp directory
 	tmpDir, err := os.MkdirTemp("", "warpgate-test-*")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
 	defer func() { _ = os.RemoveAll(tmpDir) }()
-
-	taskfileContent := `version: '3'
-tasks:
-  default:
-    cmds:
-      - echo "test"
-`
-	if err := os.WriteFile(filepath.Join(tmpDir, "Taskfile.yaml"), []byte(taskfileContent), 0644); err != nil { //nolint:gosec // G306: test file permissions
-		t.Fatalf("Failed to create Taskfile: %v", err)
-	}
 
 	client, err := NewWarpgateClient(tmpDir)
 	if err != nil {
@@ -157,17 +146,15 @@ tasks:
 	}
 }
 
-func TestNewWarpgateClientWithInvalidPath(t *testing.T) {
-	// Test with path that exists but has no Taskfile
-	tmpDir, err := os.MkdirTemp("", "warpgate-test-*")
+func TestNewWarpgateClientWithEmptyPath(t *testing.T) {
+	// Test with empty path - should succeed with no repoPath set
+	client, err := NewWarpgateClient("")
 	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
+		t.Fatalf("NewWarpgateClient with empty path failed: %v", err)
 	}
-	defer func() { _ = os.RemoveAll(tmpDir) }()
 
-	_, err = NewWarpgateClient(tmpDir)
-	if err == nil {
-		t.Error("NewWarpgateClient should fail for directory without Taskfile")
+	if client.GetRepoPath() != "" {
+		t.Errorf("GetRepoPath() = %q, want empty string", client.GetRepoPath())
 	}
 }
 
@@ -383,70 +370,4 @@ func TestNewWarpgateClientWithBinaryInvalidRepoPath(t *testing.T) {
 	if err == nil {
 		t.Error("NewWarpgateClientWithBinary should fail with invalid binary")
 	}
-}
-
-func TestListTasksWithParsing(t *testing.T) {
-	// Test that ListTasks correctly parses task output
-	// This is a unit test for the parsing logic, not the actual task execution
-	tmpDir, err := os.MkdirTemp("", "warpgate-test-*")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer func() { _ = os.RemoveAll(tmpDir) }()
-
-	taskfileContent := `version: '3'
-tasks:
-  default:
-    cmds:
-      - echo "test"
-`
-	if err := os.WriteFile(filepath.Join(tmpDir, "Taskfile.yaml"), []byte(taskfileContent), 0644); err != nil { //nolint:gosec // G306: test file permissions
-		t.Fatalf("Failed to create Taskfile: %v", err)
-	}
-
-	client, err := NewWarpgateClient(tmpDir)
-	if err != nil {
-		t.Fatalf("NewWarpgateClient failed: %v", err)
-	}
-
-	// This will fail if 'task' CLI is not installed, which is expected in CI
-	// The test verifies the client creation and method call structure
-	_, _ = client.ListTasks()
-}
-
-func TestExecuteTaskStructure(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "warpgate-test-*")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer func() { _ = os.RemoveAll(tmpDir) }()
-
-	taskfileContent := `version: '3'
-tasks:
-  default:
-    cmds:
-      - echo "test"
-`
-	if err := os.WriteFile(filepath.Join(tmpDir, "Taskfile.yaml"), []byte(taskfileContent), 0644); err != nil { //nolint:gosec // G306: test file permissions
-		t.Fatalf("Failed to create Taskfile: %v", err)
-	}
-
-	client, err := NewWarpgateClient(tmpDir)
-	if err != nil {
-		t.Fatalf("NewWarpgateClient failed: %v", err)
-	}
-
-	// Test with args
-	args := map[string]string{
-		"key1": "value1",
-		"key2": "value2",
-	}
-	// This will fail if 'task' CLI is not installed, which is expected in CI
-	_, _ = client.ExecuteTask("default", args)
-
-	// Test with nil args
-	_, _ = client.ExecuteTask("default", nil)
-
-	// Test with empty args
-	_, _ = client.ExecuteTask("default", map[string]string{})
 }

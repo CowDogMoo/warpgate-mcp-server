@@ -67,22 +67,12 @@ func TestWarpgateConfigShowIntegration(t *testing.T) {
 }
 
 func TestNewWarpgateClientWithRepoPath(t *testing.T) {
-	// Create temp directory with Taskfile
+	// Create temp directory
 	tmpDir, err := os.MkdirTemp("", "warpgate-test-*")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
 	defer func() { _ = os.RemoveAll(tmpDir) }()
-
-	taskfile := `version: '3'
-tasks:
-  default:
-    cmds:
-      - echo "test"
-`
-	if err := os.WriteFile(tmpDir+"/Taskfile.yaml", []byte(taskfile), 0644); err != nil {
-		t.Fatalf("Failed to create Taskfile: %v", err)
-	}
 
 	client, err := NewWarpgateClient(tmpDir)
 	if err != nil {

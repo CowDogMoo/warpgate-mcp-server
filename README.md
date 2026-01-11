@@ -301,29 +301,6 @@ Validate a warpgate.yaml configuration file against the template schema.
 - `config_path` (string, optional): Path to the warpgate.yaml file to validate
 - `template_dir` (string, optional): Path to a template directory containing warpgate.yaml
 
-### Workflow Tools
-
-#### `list_tasks`
-
-List all available Taskfile tasks.
-
-#### `run_task`
-
-Run a specific Taskfile task.
-
-**Parameters:**
-
-- `task_name` (string, required): Name of the task
-- `args` (object, optional): Arguments as key-value pairs
-
-#### `run_image_builder`
-
-Run the GitHub Actions image-builder workflow locally.
-
-**Parameters:**
-
-- `template` (string, optional): Specific template to build
-
 ## Common Workflows
 
 ### Build a Container Image
@@ -410,8 +387,7 @@ warpgate-mcp-server/
 │       ├── warpgate_convert.go    # Convert tool
 │       ├── warpgate_registry.go   # Registry list/inspect tools
 │       ├── warpgate_schema.go     # Schema validation tool
-│       ├── create_template.go     # Template creation tool
-│       └── workflow_operations.go # Task runner tools
+│       └── create_template.go     # Template creation tool
 ├── version/
 │   └── version.go                  # Version information
 ├── Dockerfile                      # Container image definition

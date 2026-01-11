@@ -409,50 +409,6 @@ func TestMockWarpgateClient_WarpgateValidateConfig(t *testing.T) {
 	}
 }
 
-func TestMockWarpgateClient_ExecuteTask(t *testing.T) {
-	mock := NewMockWarpgateClient()
-	mock.ExecuteTaskResponse = "Task completed"
-
-	args := map[string]string{
-		"template": "attack-box",
-	}
-
-	result, err := mock.ExecuteTask("build", args)
-	if err != nil {
-		t.Errorf("ExecuteTask returned unexpected error: %v", err)
-	}
-
-	if result != "Task completed" {
-		t.Errorf("ExecuteTask() = %q, want %q", result, "Task completed")
-	}
-
-	if mock.LastExecuteTaskName != "build" {
-		t.Errorf("LastExecuteTaskName = %q, want %q", mock.LastExecuteTaskName, "build")
-	}
-
-	if mock.LastExecuteTaskArgs["template"] != "attack-box" {
-		t.Errorf("LastExecuteTaskArgs[template] = %q, want %q", mock.LastExecuteTaskArgs["template"], "attack-box")
-	}
-}
-
-func TestMockWarpgateClient_ListTasks(t *testing.T) {
-	mock := NewMockWarpgateClient()
-	mock.ListTasksResponse = []string{"build", "validate", "push"}
-
-	result, err := mock.ListTasks()
-	if err != nil {
-		t.Errorf("ListTasks returned unexpected error: %v", err)
-	}
-
-	if len(result) != 3 {
-		t.Errorf("ListTasks() length = %d, want 3", len(result))
-	}
-
-	if result[0] != "build" {
-		t.Errorf("ListTasks()[0] = %q, want %q", result[0], "build")
-	}
-}
-
 func TestMockWarpgateClient_CLINotAvailable(t *testing.T) {
 	mock := NewMockWarpgateClient()
 	mock.CLIAvailable = false
@@ -518,16 +474,6 @@ func TestMockWarpgateClient_ErrorResponses(t *testing.T) {
 			},
 			execute: func() error {
 				_, err := mock.WarpgateConfigShow()
-				return err
-			},
-		},
-		{
-			name: "ListTasksError",
-			setup: func() {
-				mock.ListTasksError = expectedErr
-			},
-			execute: func() error {
-				_, err := mock.ListTasks()
 				return err
 			},
 		},

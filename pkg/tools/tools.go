@@ -45,9 +45,4 @@ func RegisterTools(s *server.MCPServer, logger *logging.Logger, warpgatePath str
 	warpgateRegistryInspect(s, logger, warpgatePath)
 	warpgateRegistryDelete(s, logger, warpgatePath)
 	warpgateRegistryCopy(s, logger, warpgatePath)
-
-	// Workflow tools
-	listTasks(s, logger, warpgatePath)
-	runTask(s, logger, warpgatePath)
-	runImageBuilder(s, logger, warpgatePath)
 }

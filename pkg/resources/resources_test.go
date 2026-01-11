@@ -5,7 +5,6 @@ package resources
 
 import (
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/cowdogmoo/warpgate-mcp-server/pkg/logging"
@@ -38,17 +37,6 @@ func createTestWarpgateDir(t *testing.T) (string, func()) {
 	tmpDir, err := os.MkdirTemp("", "warpgate-test-*")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-
-	taskfile := `version: '3'
-tasks:
-  default:
-    cmds:
-      - echo "test"
-`
-	if err := os.WriteFile(filepath.Join(tmpDir, "Taskfile.yaml"), []byte(taskfile), 0644); err != nil { //nolint:gosec // G306: test file permissions
-		_ = os.RemoveAll(tmpDir)
-		t.Fatalf("Failed to create Taskfile: %v", err)
 	}
 
 	cleanup := func() {

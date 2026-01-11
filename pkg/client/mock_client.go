@@ -48,10 +48,6 @@ type WarpgateClientInterface interface {
 	// Registry operations
 	RegistryDelete(opts RegistryDeleteOptions) (string, error)
 	RegistryCopy(opts RegistryCopyOptions) (string, error)
-
-	// Task operations
-	ExecuteTask(taskName string, args map[string]string) (string, error)
-	ListTasks() ([]string, error)
 }
 
 // Ensure WarpgateClient implements the interface
@@ -106,10 +102,6 @@ type MockWarpgateClient struct {
 	RegistryDeleteError      error
 	RegistryCopyResponse     string
 	RegistryCopyError        error
-	ExecuteTaskResponse      string
-	ExecuteTaskError         error
-	ListTasksResponse        []string
-	ListTasksError           error
 
 	// Call tracking
 	LastExecuteCLIArgs        []string
@@ -140,8 +132,6 @@ type MockWarpgateClient struct {
 	LastValidateConfigPath    string
 	LastRegistryDeleteOptions RegistryDeleteOptions
 	LastRegistryCopyOptions   RegistryCopyOptions
-	LastExecuteTaskName       string
-	LastExecuteTaskArgs       map[string]string
 }
 
 // NewMockWarpgateClient creates a new mock client with default values
@@ -288,18 +278,6 @@ func (m *MockWarpgateClient) WarpgateConvert(source, output string) (string, err
 func (m *MockWarpgateClient) WarpgateValidateConfig(configPath string) (string, error) {
 	m.LastValidateConfigPath = configPath
 	return m.ValidateConfigResponse, m.ValidateConfigError
-}
-
-// ExecuteTask mocks task execution
-func (m *MockWarpgateClient) ExecuteTask(taskName string, args map[string]string) (string, error) {
-	m.LastExecuteTaskName = taskName
-	m.LastExecuteTaskArgs = args
-	return m.ExecuteTaskResponse, m.ExecuteTaskError
-}
-
-// ListTasks mocks the list tasks command
-func (m *MockWarpgateClient) ListTasks() ([]string, error) {
-	return m.ListTasksResponse, m.ListTasksError
 }
 
 // ExecuteCLIStreaming mocks streaming CLI execution

@@ -27,52 +27,25 @@ type WarpgateClient struct {
 }
 
 // NewWarpgateClient creates a new Warpgate client
-// If repoPath is empty, it will attempt to find the warpgate repo
+// repoPath is optional and used as working directory for CLI commands
 func NewWarpgateClient(repoPath string) (*WarpgateClient, error) {
 	client := &WarpgateClient{}
 
 	// Detect warpgate CLI binary
 	if err := client.detectWarpgateBinary(""); err != nil {
-		// CLI detection failed, but we can still use task-based operations
 		client.cliDetected = false
 	} else {
 		client.cliDetected = true
 	}
 
-	if repoPath == "" {
-		// Try to auto-detect the warpgate repository
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get home directory: %w", err)
+	if repoPath != "" {
+		// Verify the path exists
+		if _, err := os.Stat(repoPath); err != nil {
+			return nil, fmt.Errorf("path not found: %s: %w", repoPath, err)
 		}
-
-		// Common locations for the warpgate repo
-		possiblePaths := []string{
-			filepath.Join(home, "warpgate"),
-			filepath.Join(home, "cowdogmoo", "warpgate"),
-			filepath.Join(home, "code", "warpgate"),
-			filepath.Join(home, "projects", "warpgate"),
-		}
-
-		for _, path := range possiblePaths {
-			if _, err := os.Stat(filepath.Join(path, "Taskfile.yaml")); err == nil {
-				repoPath = path
-				break
-			}
-		}
-
-		if repoPath == "" {
-			return nil, fmt.Errorf("warpgate repository not found in common locations")
-		}
+		client.repoPath = repoPath
 	}
 
-	// Verify the path exists and contains a Taskfile
-	taskfilePath := filepath.Join(repoPath, "Taskfile.yaml")
-	if _, err := os.Stat(taskfilePath); err != nil {
-		return nil, fmt.Errorf("taskfile.yaml not found in %s: %w", repoPath, err)
-	}
-
-	client.repoPath = repoPath
 	return client, nil
 }
 
@@ -87,10 +60,9 @@ func NewWarpgateClientWithBinary(repoPath, binaryPath string) (*WarpgateClient, 
 	client.cliDetected = true
 
 	if repoPath != "" {
-		// Verify the path exists and contains a Taskfile
-		taskfilePath := filepath.Join(repoPath, "Taskfile.yaml")
-		if _, err := os.Stat(taskfilePath); err != nil {
-			return nil, fmt.Errorf("taskfile.yaml not found in %s: %w", repoPath, err)
+		// Verify the path exists
+		if _, err := os.Stat(repoPath); err != nil {
+			return nil, fmt.Errorf("path not found: %s: %w", repoPath, err)
 		}
 		client.repoPath = repoPath
 	}
@@ -231,63 +203,6 @@ func (w *WarpgateClient) GetBinaryPath() string {
 // GetRepoPath returns the repository path
 func (w *WarpgateClient) GetRepoPath() string {
 	return w.repoPath
-}
-
-// ExecuteTask runs a task command in the warpgate repository
-func (w *WarpgateClient) ExecuteTask(taskName string, args map[string]string) (string, error) {
-	// Build the task command
-	cmdArgs := []string{taskName}
-
-	// Add arguments in the format expected by taskfile
-	if len(args) > 0 {
-		cmdArgs = append(cmdArgs, "--")
-		for key, value := range args {
-			cmdArgs = append(cmdArgs, fmt.Sprintf("%s=%s", key, value))
-		}
-	}
-
-	cmd := exec.Command("task", cmdArgs...) //nolint:gosec // G204: task execution with validated args
-	cmd.Dir = w.repoPath
-	cmd.Env = append(os.Environ(), "TASK_X_REMOTE_TASKFILES=1")
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return string(output), fmt.Errorf("task execution failed: %w\nOutput: %s", err, string(output))
-	}
-
-	return string(output), nil
-}
-
-// ListTasks returns available tasks from the Taskfile
-func (w *WarpgateClient) ListTasks() ([]string, error) {
-	cmd := exec.Command("task", "--list-all")
-	cmd.Dir = w.repoPath
-	cmd.Env = append(os.Environ(), "TASK_X_REMOTE_TASKFILES=1")
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return nil, fmt.Errorf("failed to list tasks: %w", err)
-	}
-
-	// Parse the output to extract task names
-	lines := strings.Split(string(output), "\n")
-	var tasks []string
-
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		// Skip empty lines and headers
-		if line == "" || strings.HasPrefix(line, "task:") {
-			continue
-		}
-
-		// Extract task name (first word)
-		fields := strings.Fields(line)
-		if len(fields) > 0 && !strings.HasPrefix(fields[0], "*") {
-			tasks = append(tasks, fields[0])
-		}
-	}
-
-	return tasks, nil
 }
 
 // ExecuteCLI runs a warpgate CLI command with the given arguments
