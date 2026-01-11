@@ -1,6 +1,7 @@
 // Copyright (c) 2025 CowDogMoo
 // SPDX-License-Identifier: MIT
 
+// Package tools provides MCP tool handlers for the warpgate-mcp-server.
 package tools
 
 import (
@@ -11,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+	"unicode"
 
 	"github.com/cowdogmoo/warpgate-mcp-server/pkg/logging"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -27,12 +29,13 @@ type templateData struct {
 	BaseImageVersion string
 	IncludeAMI       bool
 	Title            string
+	Platforms        []string
 }
 
 func createTemplate(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
 	tool := mcp.Tool{
 		Name:        "create_template",
-		Description: "Create a new Packer template with all required files and structure",
+		Description: "Create a new warpgate template with warpgate.yaml configuration and scaffolding. Generates the modern YAML-based template format.",
 		InputSchema: mcp.ToolInputSchema{
 			Type: "object",
 			Properties: map[string]interface{}{
@@ -50,18 +53,25 @@ func createTemplate(s *server.MCPServer, logger *logging.Logger, warpgatePath st
 				},
 				"base_image_version": map[string]interface{}{
 					"type":        "string",
-					"description": "Version of the base image (default: 'latest')",
+					"description": "Version of the base image (default: '22.04')",
+				},
+				"platforms": map[string]interface{}{
+					"type":        "array",
+					"description": "Target platforms (default: ['linux/amd64', 'linux/arm64'])",
+					"items": map[string]interface{}{
+						"type": "string",
+					},
 				},
 				"include_ami": map[string]interface{}{
 					"type":        "boolean",
-					"description": "Include AWS AMI configuration (default: false)",
+					"description": "Include AWS AMI target configuration (default: false)",
 				},
 			},
 			Required: []string{"template_name", "description"},
 		},
 	}
 
-	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		args := request.Params.Arguments
 		templateName := args["template_name"].(string)
 		description := args["description"].(string)
@@ -78,7 +88,7 @@ func createTemplate(s *server.MCPServer, logger *logging.Logger, warpgatePath st
 			baseImage = val
 		}
 
-		baseImageVersion := "latest"
+		baseImageVersion := "22.04"
 		if val, ok := args["base_image_version"].(string); ok && val != "" {
 			baseImageVersion = val
 		}
@@ -88,22 +98,39 @@ func createTemplate(s *server.MCPServer, logger *logging.Logger, warpgatePath st
 			includeAMI = val
 		}
 
+		var platforms []string
+		if val, ok := args["platforms"].([]interface{}); ok {
+			for _, p := range val {
+				if ps, ok := p.(string); ok {
+					platforms = append(platforms, ps)
+				}
+			}
+		}
+
 		// Create template directory
-		templateDir := filepath.Join(warpgatePath, "packer-templates", templateName)
-		if err := os.MkdirAll(templateDir, 0755); err != nil {
+		templateDir := filepath.Join(warpgatePath, "templates", templateName)
+		if err := os.MkdirAll(templateDir, 0755); err != nil { //nolint:gosec // G301: template directories need to be accessible
 			logger.Errorf("Failed to create template directory: %v", err)
 			return mcp.NewToolResultError(
 				fmt.Sprintf("Failed to create template directory: %v", err)), nil
 		}
 
 		// Check if template already exists
-		if _, err := os.Stat(filepath.Join(templateDir, "docker.pkr.hcl")); err == nil {
+		if _, err := os.Stat(filepath.Join(templateDir, "warpgate.yaml")); err == nil {
 			return mcp.NewToolResultError(
 				fmt.Sprintf("Template '%s' already exists at %s", templateName, templateDir)), nil
 		}
 
+		// Create scripts directory
+		scriptsDir := filepath.Join(templateDir, "scripts")
+		if err := os.MkdirAll(scriptsDir, 0755); err != nil { //nolint:gosec // G301: script directories need to be accessible
+			logger.Errorf("Failed to create scripts directory: %v", err)
+			return mcp.NewToolResultError(
+				fmt.Sprintf("Failed to create scripts directory: %v", err)), nil
+		}
+
 		// Prepare template data
-		title := strings.ReplaceAll(strings.Title(strings.ReplaceAll(templateName, "-", " ")), " ", "-")
+		title := strings.ReplaceAll(titleCase(strings.ReplaceAll(templateName, "-", " ")), " ", "-")
 		data := templateData{
 			TemplateName:     templateName,
 			Description:      description,
@@ -111,19 +138,13 @@ func createTemplate(s *server.MCPServer, logger *logging.Logger, warpgatePath st
 			BaseImageVersion: baseImageVersion,
 			IncludeAMI:       includeAMI,
 			Title:            title,
+			Platforms:        platforms,
 		}
 
 		// Create files from templates
 		files := map[string]string{
-			"plugins.pkr.hcl":   "templates/plugins.pkr.hcl.tmpl",
-			"locals.pkr.hcl":    "templates/locals.pkr.hcl.tmpl",
-			"variables.pkr.hcl": "templates/variables.pkr.hcl.tmpl",
-			"docker.pkr.hcl":    "templates/docker.pkr.hcl.tmpl",
-			"README.md":         "templates/README.md.tmpl",
-		}
-
-		if includeAMI {
-			files["ami.pkr.hcl"] = "templates/ami.pkr.hcl.tmpl"
+			"warpgate.yaml": "templates/warpgate.yaml.tmpl",
+			"README.md":     "templates/warpgate-README.md.tmpl",
 		}
 
 		for filename, templatePath := range files {
@@ -135,29 +156,48 @@ func createTemplate(s *server.MCPServer, logger *logging.Logger, warpgatePath st
 			}
 		}
 
+		// Create a placeholder setup script
+		setupScriptPath := filepath.Join(scriptsDir, "setup.sh")
+		setupScriptContent := `#!/bin/bash
+# Provisioning script for ` + templateName + `
+# Add your setup commands here
+
+set -e
+
+echo "Setting up ` + templateName + `..."
+
+# Example: Install packages
+# apt-get update
+# apt-get install -y your-packages
+
+echo "Setup complete!"
+`
+		if err := os.WriteFile(setupScriptPath, []byte(setupScriptContent), 0755); err != nil { //nolint:gosec // G306: scripts need to be executable
+			logger.Errorf("Failed to create setup script: %v", err)
+			return mcp.NewToolResultError(
+				fmt.Sprintf("Failed to create setup script: %v", err)), nil
+		}
+
 		logger.Infof("Successfully created template: %s", templateName)
-		result := fmt.Sprintf(`Successfully created template '%s' at %s
+		result := fmt.Sprintf(`Successfully created warpgate template '%s' at %s
 
 Files created:
-- plugins.pkr.hcl (Packer plugin requirements)
-- locals.pkr.hcl (Local variables)
-- variables.pkr.hcl (Template variables)
-- docker.pkr.hcl (Docker build configuration)
+- warpgate.yaml (Template configuration)
 - README.md (Template documentation)
+- scripts/setup.sh (Provisioning script placeholder)
 %s
-
 Next steps:
-1. Initialize the template: task template-init TEMPLATE_NAME=%s
-2. Customize the provisioning steps in docker.pkr.hcl
-3. Validate the template: task template-validate TEMPLATE_NAME=%s
-4. Build the template: task template-build TEMPLATE_NAME=%s
+1. Edit warpgate.yaml to configure provisioning
+2. Add provisioning logic to scripts/setup.sh or use Ansible
+3. Validate: warpgate validate %s/warpgate.yaml
+4. Build: warpgate build %s/warpgate.yaml
 `, templateName, templateDir,
-	func() string {
-		if includeAMI {
-			return "- ami.pkr.hcl (AWS AMI configuration)\n"
-		}
-		return ""
-	}(), templateName, templateName, templateName)
+			func() string {
+				if includeAMI {
+					return "- AMI target configuration included\n"
+				}
+				return ""
+			}(), templateDir, templateDir)
 
 		return mcp.NewToolResultText(result), nil
 	}
@@ -179,11 +219,11 @@ func renderTemplate(templatePath, outputPath string, data templateData) error {
 	}
 
 	// Create output file
-	f, err := os.Create(outputPath)
+	f, err := os.Create(outputPath) //nolint:gosec // G304: outputPath is constructed from validated template names
 	if err != nil {
 		return fmt.Errorf("failed to create output file %s: %w", outputPath, err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	// Execute template
 	if err := tmpl.Execute(f, data); err != nil {
@@ -198,10 +238,25 @@ func isValidTemplateName(name string) bool {
 		return false
 	}
 	for _, c := range name {
-		if !((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-') {
+		isLower := c >= 'a' && c <= 'z'
+		isDigit := c >= '0' && c <= '9'
+		isHyphen := c == '-'
+		if !isLower && !isDigit && !isHyphen {
 			return false
 		}
 	}
 	return true
 }
 
+// titleCase capitalizes the first letter of each word in a string
+func titleCase(s string) string {
+	words := strings.Fields(s)
+	for i, word := range words {
+		if len(word) > 0 {
+			runes := []rune(word)
+			runes[0] = unicode.ToUpper(runes[0])
+			words[i] = string(runes)
+		}
+	}
+	return strings.Join(words, " ")
+}

@@ -15,27 +15,32 @@ Thank you for your interest in contributing! This document provides guidelines a
 ### Getting Started
 
 1. Fork and clone the repository:
+
 ```bash
 git clone https://github.com/cowdogmoo/warpgate-mcp-server.git
 cd warpgate-mcp-server
 ```
 
 2. Install dependencies:
+
 ```bash
 go mod download
 ```
 
 3. Install pre-commit hooks:
+
 ```bash
 pre-commit install
 ```
 
 4. Build the project:
+
 ```bash
 make build
 ```
 
 5. Run tests:
+
 ```bash
 make test
 ```
@@ -101,6 +106,7 @@ golangci-lint run ./...
 ## Pull Request Process
 
 1. **Create a feature branch**:
+
    ```bash
    git checkout -b feature/your-feature-name
    ```
@@ -112,18 +118,21 @@ golangci-lint run ./...
    - Update documentation as needed
 
 3. **Run tests and checks**:
+
    ```bash
    make test
    pre-commit run --all-files
    ```
 
 4. **Commit your changes**:
+
    ```bash
    git add .
    git commit -m "feat: add amazing feature"
    ```
 
 5. **Push to your fork**:
+
    ```bash
    git push origin feature/your-feature-name
    ```
@@ -146,7 +155,8 @@ We follow the [Conventional Commits](https://www.conventionalcommits.org/) speci
 - `chore:` Maintenance tasks
 
 Examples:
-```
+
+```text
 feat: add support for multi-region builds
 fix: correct template path resolution
 docs: update installation instructions
@@ -168,6 +178,7 @@ docs: update installation instructions
 - Use table-driven tests where appropriate
 
 Example test structure:
+
 ```go
 func TestFunction(t *testing.T) {
     tests := []struct {
@@ -200,10 +211,12 @@ Releases are automated using GoReleaser:
 
 1. Update version in `version/version.go`
 2. Create and push a tag:
+
    ```bash
    git tag -a v0.2.0 -m "Release v0.2.0"
    git push origin v0.2.0
    ```
+
 3. GitHub Actions will automatically build and publish the release
 
 ## Getting Help

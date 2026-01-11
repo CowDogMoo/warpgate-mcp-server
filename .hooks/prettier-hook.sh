@@ -8,11 +8,11 @@ FILES=("$@")
 
 # Check if prettier is installed
 if ! command -v prettier &>/dev/null; then
-    echo "prettier is not installed. Installing..."
-    npm install -g prettier
+	echo "prettier is not installed. Installing..."
+	npm install -g prettier
 fi
 
 # Run prettier on the files
 for file in "${FILES[@]}"; do
-    prettier --write "$file"
+	prettier --write "$file"
 done

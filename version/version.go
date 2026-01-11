@@ -1,6 +1,7 @@
 // Copyright (c) 2025 CowDogMoo
 // SPDX-License-Identifier: MIT
 
+// Package version provides version information for the warpgate-mcp-server.
 package version
 
 import "fmt"
