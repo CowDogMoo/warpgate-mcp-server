@@ -18,16 +18,16 @@ func createTestLogger(t *testing.T) (*logging.Logger, func()) {
 	if err != nil {
 		t.Fatalf("Failed to create temp log file: %v", err)
 	}
-	tmpFile.Close()
+	_ = tmpFile.Close()
 
 	logger, err := logging.NewLogger(tmpFile.Name())
 	if err != nil {
-		os.Remove(tmpFile.Name())
+		_ = os.Remove(tmpFile.Name())
 		t.Fatalf("Failed to create logger: %v", err)
 	}
 
 	cleanup := func() {
-		os.Remove(tmpFile.Name())
+		_ = os.Remove(tmpFile.Name())
 	}
 
 	return logger, cleanup
@@ -46,13 +46,13 @@ tasks:
     cmds:
       - echo "test"
 `
-	if err := os.WriteFile(filepath.Join(tmpDir, "Taskfile.yaml"), []byte(taskfile), 0644); err != nil {
-		os.RemoveAll(tmpDir)
+	if err := os.WriteFile(filepath.Join(tmpDir, "Taskfile.yaml"), []byte(taskfile), 0644); err != nil { //nolint:gosec // G306: test file permissions
+		_ = os.RemoveAll(tmpDir)
 		t.Fatalf("Failed to create Taskfile: %v", err)
 	}
 
 	cleanup := func() {
-		os.RemoveAll(tmpDir)
+		_ = os.RemoveAll(tmpDir)
 	}
 
 	return tmpDir, cleanup
@@ -128,7 +128,7 @@ func TestRegisterToolsWithDifferentServerOptions(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(tc.name, func(_ *testing.T) {
 			s := server.NewMCPServer("test", "1.0.0", tc.opts...)
 			RegisterTools(s, logger, tmpDir)
 		})
@@ -143,87 +143,87 @@ func TestIndividualToolRegistration(t *testing.T) {
 	defer cleanupDir()
 
 	// Test each tool registration function individually
-	t.Run("warpgateBuild", func(t *testing.T) {
+	t.Run("warpgateBuild", func(_ *testing.T) {
 		s := server.NewMCPServer("test", "1.0.0")
 		warpgateBuild(s, logger, tmpDir)
 	})
 
-	t.Run("warpgateValidate", func(t *testing.T) {
+	t.Run("warpgateValidate", func(_ *testing.T) {
 		s := server.NewMCPServer("test", "1.0.0")
 		warpgateValidate(s, logger, tmpDir)
 	})
 
-	t.Run("warpgateInit", func(t *testing.T) {
+	t.Run("warpgateInit", func(_ *testing.T) {
 		s := server.NewMCPServer("test", "1.0.0")
 		warpgateInit(s, logger, tmpDir)
 	})
 
-	t.Run("warpgateTemplatesList", func(t *testing.T) {
+	t.Run("warpgateTemplatesList", func(_ *testing.T) {
 		s := server.NewMCPServer("test", "1.0.0")
 		warpgateTemplatesList(s, logger, tmpDir)
 	})
 
-	t.Run("warpgateTemplatesInfo", func(t *testing.T) {
+	t.Run("warpgateTemplatesInfo", func(_ *testing.T) {
 		s := server.NewMCPServer("test", "1.0.0")
 		warpgateTemplatesInfo(s, logger, tmpDir)
 	})
 
-	t.Run("warpgateTemplatesAdd", func(t *testing.T) {
+	t.Run("warpgateTemplatesAdd", func(_ *testing.T) {
 		s := server.NewMCPServer("test", "1.0.0")
 		warpgateTemplatesAdd(s, logger, tmpDir)
 	})
 
-	t.Run("warpgateTemplatesRemove", func(t *testing.T) {
+	t.Run("warpgateTemplatesRemove", func(_ *testing.T) {
 		s := server.NewMCPServer("test", "1.0.0")
 		warpgateTemplatesRemove(s, logger, tmpDir)
 	})
 
-	t.Run("createTemplate", func(t *testing.T) {
+	t.Run("createTemplate", func(_ *testing.T) {
 		s := server.NewMCPServer("test", "1.0.0")
 		createTemplate(s, logger, tmpDir)
 	})
 
-	t.Run("warpgateManifestsCreate", func(t *testing.T) {
+	t.Run("warpgateManifestsCreate", func(_ *testing.T) {
 		s := server.NewMCPServer("test", "1.0.0")
 		warpgateManifestsCreate(s, logger, tmpDir)
 	})
 
-	t.Run("warpgateManifestsPush", func(t *testing.T) {
+	t.Run("warpgateManifestsPush", func(_ *testing.T) {
 		s := server.NewMCPServer("test", "1.0.0")
 		warpgateManifestsPush(s, logger, tmpDir)
 	})
 
-	t.Run("warpgateConfigGet", func(t *testing.T) {
+	t.Run("warpgateConfigGet", func(_ *testing.T) {
 		s := server.NewMCPServer("test", "1.0.0")
 		warpgateConfigGet(s, logger, tmpDir)
 	})
 
-	t.Run("warpgateConfigSet", func(t *testing.T) {
+	t.Run("warpgateConfigSet", func(_ *testing.T) {
 		s := server.NewMCPServer("test", "1.0.0")
 		warpgateConfigSet(s, logger, tmpDir)
 	})
 
-	t.Run("warpgateConfigShow", func(t *testing.T) {
+	t.Run("warpgateConfigShow", func(_ *testing.T) {
 		s := server.NewMCPServer("test", "1.0.0")
 		warpgateConfigShow(s, logger, tmpDir)
 	})
 
-	t.Run("warpgateConvert", func(t *testing.T) {
+	t.Run("warpgateConvert", func(_ *testing.T) {
 		s := server.NewMCPServer("test", "1.0.0")
 		warpgateConvert(s, logger, tmpDir)
 	})
 
-	t.Run("listTasks", func(t *testing.T) {
+	t.Run("listTasks", func(_ *testing.T) {
 		s := server.NewMCPServer("test", "1.0.0")
 		listTasks(s, logger, tmpDir)
 	})
 
-	t.Run("runTask", func(t *testing.T) {
+	t.Run("runTask", func(_ *testing.T) {
 		s := server.NewMCPServer("test", "1.0.0")
 		runTask(s, logger, tmpDir)
 	})
 
-	t.Run("runImageBuilder", func(t *testing.T) {
+	t.Run("runImageBuilder", func(_ *testing.T) {
 		s := server.NewMCPServer("test", "1.0.0")
 		runImageBuilder(s, logger, tmpDir)
 	})

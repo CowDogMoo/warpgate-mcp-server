@@ -116,7 +116,7 @@ func TestRenderTemplate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	data := templateData{
 		TemplateName:     "test-template",
@@ -136,7 +136,7 @@ func TestRenderTemplate(t *testing.T) {
 	}
 
 	// Verify output file exists and has content
-	content, err := os.ReadFile(outputPath)
+	content, err := os.ReadFile(outputPath) //nolint:gosec // G304: test file reading
 	if err != nil {
 		t.Fatalf("Failed to read rendered template: %v", err)
 	}
@@ -168,7 +168,7 @@ func TestRenderTemplateWithAMI(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	data := templateData{
 		TemplateName:     "ami-test",
@@ -186,7 +186,7 @@ func TestRenderTemplateWithAMI(t *testing.T) {
 		t.Fatalf("Failed to render template: %v", err)
 	}
 
-	content, err := os.ReadFile(outputPath)
+	content, err := os.ReadFile(outputPath) //nolint:gosec // G304: test file reading
 	if err != nil {
 		t.Fatalf("Failed to read rendered template: %v", err)
 	}
@@ -226,7 +226,7 @@ func TestRenderTemplateErrors(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	data := templateData{
 		TemplateName:     "test",
@@ -256,7 +256,7 @@ func TestRenderTemplateReadmeWithAMI(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	data := templateData{
 		TemplateName:     "test-ami",
@@ -275,7 +275,7 @@ func TestRenderTemplateReadmeWithAMI(t *testing.T) {
 		t.Fatalf("Failed to render README template: %v", err)
 	}
 
-	content, err := os.ReadFile(outputPath)
+	content, err := os.ReadFile(outputPath) //nolint:gosec // G304: test file reading
 	if err != nil {
 		t.Fatalf("Failed to read rendered README: %v", err)
 	}
@@ -296,7 +296,7 @@ func TestRenderTemplateDefaultPlatforms(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	data := templateData{
 		TemplateName:     "default-platforms",
@@ -427,7 +427,7 @@ func TestTemplateDataAllFields(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -445,7 +445,7 @@ func TestRenderTemplateFilePermissions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	data := templateData{
 		TemplateName:     "perms-test",

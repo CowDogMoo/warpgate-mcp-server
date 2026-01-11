@@ -1,6 +1,7 @@
 // Copyright (c) 2025 CowDogMoo
 // SPDX-License-Identifier: MIT
 
+// Package tools provides MCP tool handlers for the warpgate-mcp-server.
 package tools
 
 import (
@@ -11,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+	"unicode"
 
 	"github.com/cowdogmoo/warpgate-mcp-server/pkg/logging"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -69,7 +71,7 @@ func createTemplate(s *server.MCPServer, logger *logging.Logger, warpgatePath st
 		},
 	}
 
-	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		args := request.Params.Arguments
 		templateName := args["template_name"].(string)
 		description := args["description"].(string)
@@ -107,7 +109,7 @@ func createTemplate(s *server.MCPServer, logger *logging.Logger, warpgatePath st
 
 		// Create template directory
 		templateDir := filepath.Join(warpgatePath, "templates", templateName)
-		if err := os.MkdirAll(templateDir, 0755); err != nil {
+		if err := os.MkdirAll(templateDir, 0755); err != nil { //nolint:gosec // G301: template directories need to be accessible
 			logger.Errorf("Failed to create template directory: %v", err)
 			return mcp.NewToolResultError(
 				fmt.Sprintf("Failed to create template directory: %v", err)), nil
@@ -121,14 +123,14 @@ func createTemplate(s *server.MCPServer, logger *logging.Logger, warpgatePath st
 
 		// Create scripts directory
 		scriptsDir := filepath.Join(templateDir, "scripts")
-		if err := os.MkdirAll(scriptsDir, 0755); err != nil {
+		if err := os.MkdirAll(scriptsDir, 0755); err != nil { //nolint:gosec // G301: script directories need to be accessible
 			logger.Errorf("Failed to create scripts directory: %v", err)
 			return mcp.NewToolResultError(
 				fmt.Sprintf("Failed to create scripts directory: %v", err)), nil
 		}
 
 		// Prepare template data
-		title := strings.ReplaceAll(strings.Title(strings.ReplaceAll(templateName, "-", " ")), " ", "-")
+		title := strings.ReplaceAll(titleCase(strings.ReplaceAll(templateName, "-", " ")), " ", "-")
 		data := templateData{
 			TemplateName:     templateName,
 			Description:      description,
@@ -170,7 +172,7 @@ echo "Setting up ` + templateName + `..."
 
 echo "Setup complete!"
 `
-		if err := os.WriteFile(setupScriptPath, []byte(setupScriptContent), 0755); err != nil {
+		if err := os.WriteFile(setupScriptPath, []byte(setupScriptContent), 0755); err != nil { //nolint:gosec // G306: scripts need to be executable
 			logger.Errorf("Failed to create setup script: %v", err)
 			return mcp.NewToolResultError(
 				fmt.Sprintf("Failed to create setup script: %v", err)), nil
@@ -217,11 +219,11 @@ func renderTemplate(templatePath, outputPath string, data templateData) error {
 	}
 
 	// Create output file
-	f, err := os.Create(outputPath)
+	f, err := os.Create(outputPath) //nolint:gosec // G304: outputPath is constructed from validated template names
 	if err != nil {
 		return fmt.Errorf("failed to create output file %s: %w", outputPath, err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	// Execute template
 	if err := tmpl.Execute(f, data); err != nil {
@@ -236,9 +238,25 @@ func isValidTemplateName(name string) bool {
 		return false
 	}
 	for _, c := range name {
-		if !((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-') {
+		isLower := c >= 'a' && c <= 'z'
+		isDigit := c >= '0' && c <= '9'
+		isHyphen := c == '-'
+		if !isLower && !isDigit && !isHyphen {
 			return false
 		}
 	}
 	return true
+}
+
+// titleCase capitalizes the first letter of each word in a string
+func titleCase(s string) string {
+	words := strings.Fields(s)
+	for i, word := range words {
+		if len(word) > 0 {
+			runes := []rune(word)
+			runes[0] = unicode.ToUpper(runes[0])
+			words[i] = string(runes)
+		}
+	}
+	return strings.Join(words, " ")
 }

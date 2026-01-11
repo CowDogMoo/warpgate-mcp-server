@@ -64,7 +64,8 @@ type ProvisionerConfig struct {
 	Destination string   `yaml:"destination"`
 }
 
-func warpgateSchemaValidate(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
+//nolint:gocyclo // complexity is acceptable for comprehensive schema validation
+func warpgateSchemaValidate(s *server.MCPServer, _ *logging.Logger, warpgatePath string) {
 	tool := mcp.Tool{
 		Name:        "warpgate_schema_validate",
 		Description: "Validate a warpgate.yaml configuration file against the template schema. Reports structural errors, missing required fields, and type mismatches.",
@@ -83,7 +84,7 @@ func warpgateSchemaValidate(s *server.MCPServer, logger *logging.Logger, warpgat
 		},
 	}
 
-	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var configPath string
 
 		if path, ok := request.Params.Arguments["config_path"].(string); ok && path != "" {
@@ -95,7 +96,7 @@ func warpgateSchemaValidate(s *server.MCPServer, logger *logging.Logger, warpgat
 		}
 
 		// Read and parse the YAML file
-		data, err := os.ReadFile(configPath)
+		data, err := os.ReadFile(configPath) //nolint:gosec // G304: configPath is user-provided for validation
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to read config file: %v", err)), nil
 		}
@@ -112,11 +113,9 @@ func warpgateSchemaValidate(s *server.MCPServer, logger *logging.Logger, warpgat
 		// Required: name
 		if config.Name == "" {
 			errors = append(errors, "missing required field: name")
-		} else {
+		} else if !isValidTemplateName(config.Name) {
 			// Validate name format
-			if !isValidTemplateName(config.Name) {
-				errors = append(errors, fmt.Sprintf("invalid name format: '%s' (must be lowercase alphanumeric with hyphens, no leading/trailing hyphens)", config.Name))
-			}
+			errors = append(errors, fmt.Sprintf("invalid name format: '%s' (must be lowercase alphanumeric with hyphens, no leading/trailing hyphens)", config.Name))
 		}
 
 		// Recommended: description

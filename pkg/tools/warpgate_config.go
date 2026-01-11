@@ -28,7 +28,7 @@ func warpgateConfigGet(s *server.MCPServer, logger *logging.Logger, warpgatePath
 		},
 	}
 
-	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		wg, err := client.NewWarpgateClient(warpgatePath)
 		if err != nil {
 			logger.Errorf("Failed to create Warpgate client: %v", err)
@@ -76,7 +76,7 @@ func warpgateConfigSet(s *server.MCPServer, logger *logging.Logger, warpgatePath
 		},
 	}
 
-	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		key, ok := request.Params.Arguments["key"].(string)
 		if !ok || key == "" {
 			return mcp.NewToolResultError("key is required and must be a string"), nil
@@ -120,7 +120,7 @@ func warpgateConfigShow(s *server.MCPServer, logger *logging.Logger, warpgatePat
 		},
 	}
 
-	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		wg, err := client.NewWarpgateClient(warpgatePath)
 		if err != nil {
 			logger.Errorf("Failed to create Warpgate client: %v", err)

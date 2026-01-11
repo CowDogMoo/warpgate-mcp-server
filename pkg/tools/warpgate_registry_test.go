@@ -194,3 +194,183 @@ func TestManifestsInspectMultipleTags(t *testing.T) {
 		}
 	}
 }
+
+func TestRegistryDeleteOptions(t *testing.T) {
+	opts := client.RegistryDeleteOptions{
+		Name:      "attack-box",
+		Registry:  "ghcr.io/cowdogmoo",
+		Namespace: "images",
+		Tags:      []string{"old-tag", "deprecated"},
+		AuthFile:  "/path/to/auth.json",
+		DryRun:    true,
+	}
+
+	if opts.Name != "attack-box" {
+		t.Errorf("RegistryDeleteOptions.Name = %q, want %q", opts.Name, "attack-box")
+	}
+
+	if opts.Registry != "ghcr.io/cowdogmoo" {
+		t.Errorf("RegistryDeleteOptions.Registry = %q, want %q", opts.Registry, "ghcr.io/cowdogmoo")
+	}
+
+	if opts.Namespace != "images" {
+		t.Errorf("RegistryDeleteOptions.Namespace = %q, want %q", opts.Namespace, "images")
+	}
+
+	if len(opts.Tags) != 2 {
+		t.Errorf("len(RegistryDeleteOptions.Tags) = %d, want 2", len(opts.Tags))
+	}
+
+	if opts.Tags[0] != "old-tag" {
+		t.Errorf("RegistryDeleteOptions.Tags[0] = %q, want %q", opts.Tags[0], "old-tag")
+	}
+
+	if opts.AuthFile != "/path/to/auth.json" {
+		t.Errorf("RegistryDeleteOptions.AuthFile = %q, want %q", opts.AuthFile, "/path/to/auth.json")
+	}
+
+	if !opts.DryRun {
+		t.Error("RegistryDeleteOptions.DryRun should be true")
+	}
+}
+
+func TestRegistryDeleteOptionsMinimal(t *testing.T) {
+	opts := client.RegistryDeleteOptions{
+		Name:     "sliver",
+		Registry: "docker.io/library",
+		Tags:     []string{"v1.0"},
+	}
+
+	if opts.Name != "sliver" {
+		t.Errorf("RegistryDeleteOptions.Name = %q, want %q", opts.Name, "sliver")
+	}
+
+	if opts.Registry != "docker.io/library" {
+		t.Errorf("RegistryDeleteOptions.Registry = %q, want %q", opts.Registry, "docker.io/library")
+	}
+
+	if opts.Namespace != "" {
+		t.Errorf("RegistryDeleteOptions.Namespace should be empty, got %q", opts.Namespace)
+	}
+
+	if opts.AuthFile != "" {
+		t.Errorf("RegistryDeleteOptions.AuthFile should be empty, got %q", opts.AuthFile)
+	}
+
+	if opts.DryRun {
+		t.Error("RegistryDeleteOptions.DryRun should be false by default")
+	}
+}
+
+func TestRegistryCopyOptions(t *testing.T) {
+	opts := client.RegistryCopyOptions{
+		SourceImage:     "ghcr.io/cowdogmoo/attack-box:latest",
+		DestImage:       "docker.io/myorg/attack-box:v1.0",
+		SourceAuth:      "/path/to/source-auth.json",
+		DestAuth:        "/path/to/dest-auth.json",
+		AllTags:         true,
+		PreserveDigests: true,
+	}
+
+	if opts.SourceImage != "ghcr.io/cowdogmoo/attack-box:latest" {
+		t.Errorf("RegistryCopyOptions.SourceImage = %q, want %q", opts.SourceImage, "ghcr.io/cowdogmoo/attack-box:latest")
+	}
+
+	if opts.DestImage != "docker.io/myorg/attack-box:v1.0" {
+		t.Errorf("RegistryCopyOptions.DestImage = %q, want %q", opts.DestImage, "docker.io/myorg/attack-box:v1.0")
+	}
+
+	if opts.SourceAuth != "/path/to/source-auth.json" {
+		t.Errorf("RegistryCopyOptions.SourceAuth = %q, want %q", opts.SourceAuth, "/path/to/source-auth.json")
+	}
+
+	if opts.DestAuth != "/path/to/dest-auth.json" {
+		t.Errorf("RegistryCopyOptions.DestAuth = %q, want %q", opts.DestAuth, "/path/to/dest-auth.json")
+	}
+
+	if !opts.AllTags {
+		t.Error("RegistryCopyOptions.AllTags should be true")
+	}
+
+	if !opts.PreserveDigests {
+		t.Error("RegistryCopyOptions.PreserveDigests should be true")
+	}
+}
+
+func TestRegistryCopyOptionsMinimal(t *testing.T) {
+	opts := client.RegistryCopyOptions{
+		SourceImage: "ghcr.io/src/image:v1.0",
+		DestImage:   "docker.io/dst/image:v1.0",
+	}
+
+	if opts.SourceImage != "ghcr.io/src/image:v1.0" {
+		t.Errorf("RegistryCopyOptions.SourceImage = %q, want %q", opts.SourceImage, "ghcr.io/src/image:v1.0")
+	}
+
+	if opts.DestImage != "docker.io/dst/image:v1.0" {
+		t.Errorf("RegistryCopyOptions.DestImage = %q, want %q", opts.DestImage, "docker.io/dst/image:v1.0")
+	}
+
+	if opts.SourceAuth != "" {
+		t.Errorf("RegistryCopyOptions.SourceAuth should be empty, got %q", opts.SourceAuth)
+	}
+
+	if opts.DestAuth != "" {
+		t.Errorf("RegistryCopyOptions.DestAuth should be empty, got %q", opts.DestAuth)
+	}
+
+	if opts.AllTags {
+		t.Error("RegistryCopyOptions.AllTags should be false by default")
+	}
+
+	if opts.PreserveDigests {
+		t.Error("RegistryCopyOptions.PreserveDigests should be false by default")
+	}
+}
+
+func TestRegistryCopyBetweenRegistries(t *testing.T) {
+	// Test various registry combinations
+	tests := []struct {
+		name        string
+		sourceImage string
+		destImage   string
+	}{
+		{
+			name:        "ghcr to docker hub",
+			sourceImage: "ghcr.io/cowdogmoo/attack-box:latest",
+			destImage:   "docker.io/cowdogmoo/attack-box:latest",
+		},
+		{
+			name:        "docker hub to ecr",
+			sourceImage: "docker.io/library/nginx:1.21",
+			destImage:   "123456789.dkr.ecr.us-east-1.amazonaws.com/nginx:1.21",
+		},
+		{
+			name:        "gcr to private registry",
+			sourceImage: "gcr.io/my-project/my-image:v1.0",
+			destImage:   "registry.example.com:5000/my-image:v1.0",
+		},
+		{
+			name:        "same registry different tags",
+			sourceImage: "ghcr.io/cowdogmoo/attack-box:v1.0",
+			destImage:   "ghcr.io/cowdogmoo/attack-box:production",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := client.RegistryCopyOptions{
+				SourceImage: tt.sourceImage,
+				DestImage:   tt.destImage,
+			}
+
+			if opts.SourceImage != tt.sourceImage {
+				t.Errorf("SourceImage = %q, want %q", opts.SourceImage, tt.sourceImage)
+			}
+
+			if opts.DestImage != tt.destImage {
+				t.Errorf("DestImage = %q, want %q", opts.DestImage, tt.destImage)
+			}
+		})
+	}
+}

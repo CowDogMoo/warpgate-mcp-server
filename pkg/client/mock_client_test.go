@@ -28,7 +28,7 @@ func TestNewMockWarpgateClient(t *testing.T) {
 	}
 }
 
-func TestMockWarpgateClientInterface(t *testing.T) {
+func TestMockWarpgateClientInterface(_ *testing.T) {
 	// Ensure MockWarpgateClient implements WarpgateClientInterface
 	var _ WarpgateClientInterface = (*MockWarpgateClient)(nil)
 }

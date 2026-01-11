@@ -12,6 +12,7 @@ import (
 func RegisterTools(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
 	// Warpgate CLI tools
 	warpgateBuild(s, logger, warpgatePath)
+	warpgateBuildStreaming(s, logger, warpgatePath)
 	warpgateValidate(s, logger, warpgatePath)
 	warpgateInit(s, logger, warpgatePath)
 
@@ -42,6 +43,8 @@ func RegisterTools(s *server.MCPServer, logger *logging.Logger, warpgatePath str
 	// Registry operations
 	warpgateRegistryList(s, logger, warpgatePath)
 	warpgateRegistryInspect(s, logger, warpgatePath)
+	warpgateRegistryDelete(s, logger, warpgatePath)
+	warpgateRegistryCopy(s, logger, warpgatePath)
 
 	// Workflow tools
 	listTasks(s, logger, warpgatePath)

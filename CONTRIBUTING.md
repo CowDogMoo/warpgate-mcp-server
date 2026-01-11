@@ -156,7 +156,7 @@ We follow the [Conventional Commits](https://www.conventionalcommits.org/) speci
 
 Examples:
 
-```
+```text
 feat: add support for multi-region builds
 fix: correct template path resolution
 docs: update installation instructions

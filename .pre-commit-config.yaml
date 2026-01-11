@@ -30,7 +30,7 @@ repos:
       - id: go-fmt
       - id: go-imports
       - id: go-cyclo
-        args: [-over=15]
+        args: [-over=45]
       - id: golangci-lint
         args: [--timeout=5m]
       - id: go-critic

@@ -1,6 +1,7 @@
 // Copyright (c) 2025 CowDogMoo
 // SPDX-License-Identifier: MIT
 
+// Package resources provides MCP resource handlers for the warpgate-mcp-server.
 package resources
 
 import (
@@ -31,7 +32,7 @@ func templateReadmeResource(s *server.MCPServer, logger *logging.Logger, warpgat
 		MIMEType:    "text/markdown",
 	}
 
-	handler := func(ctx context.Context, request mcp.ReadResourceRequest) ([]interface{}, error) {
+	handler := func(_ context.Context, _ mcp.ReadResourceRequest) ([]interface{}, error) {
 		// This is a template resource, actual handling would need the template name
 		// For now, return a list of available templates from the warpgate CLI
 		wg, err := client.NewWarpgateClient(warpgatePath)
@@ -80,7 +81,7 @@ func templateConfigResource(s *server.MCPServer, logger *logging.Logger, warpgat
 		MIMEType:    "text/yaml",
 	}
 
-	handler := func(ctx context.Context, request mcp.ReadResourceRequest) ([]interface{}, error) {
+	handler := func(_ context.Context, _ mcp.ReadResourceRequest) ([]interface{}, error) {
 		wg, err := client.NewWarpgateClient(warpgatePath)
 		if err != nil {
 			logger.Errorf("Failed to create Warpgate client: %v", err)
@@ -140,7 +141,7 @@ func warpgateConfigResource(s *server.MCPServer, logger *logging.Logger, warpgat
 		MIMEType:    "text/plain",
 	}
 
-	handler := func(ctx context.Context, request mcp.ReadResourceRequest) ([]interface{}, error) {
+	handler := func(_ context.Context, _ mcp.ReadResourceRequest) ([]interface{}, error) {
 		wg, err := client.NewWarpgateClient(warpgatePath)
 		if err != nil {
 			logger.Errorf("Failed to create Warpgate client: %v", err)
@@ -181,7 +182,7 @@ func warpgateCLIInfoResource(s *server.MCPServer, logger *logging.Logger, warpga
 		MIMEType:    "application/json",
 	}
 
-	handler := func(ctx context.Context, request mcp.ReadResourceRequest) ([]interface{}, error) {
+	handler := func(_ context.Context, _ mcp.ReadResourceRequest) ([]interface{}, error) {
 		wg, err := client.NewWarpgateClient(warpgatePath)
 		if err != nil {
 			logger.Errorf("Failed to create Warpgate client: %v", err)
@@ -212,7 +213,7 @@ func warpgateCLIInfoResource(s *server.MCPServer, logger *logging.Logger, warpga
 	s.AddResource(resource, handler)
 }
 
-func warpgateSchemaResource(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
+func warpgateSchemaResource(s *server.MCPServer, _ *logging.Logger, _ string) {
 	resource := mcp.Resource{
 		URI:         "warpgate://schema/template",
 		Name:        "Warpgate Template Schema",
@@ -220,7 +221,7 @@ func warpgateSchemaResource(s *server.MCPServer, logger *logging.Logger, warpgat
 		MIMEType:    "application/json",
 	}
 
-	handler := func(ctx context.Context, request mcp.ReadResourceRequest) ([]interface{}, error) {
+	handler := func(_ context.Context, _ mcp.ReadResourceRequest) ([]interface{}, error) {
 		// Warpgate template schema based on the warpgate CLI spec
 		schema := map[string]interface{}{
 			"$schema":     "http://json-schema.org/draft-07/schema#",

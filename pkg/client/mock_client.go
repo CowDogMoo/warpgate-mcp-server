@@ -1,6 +1,7 @@
 // Copyright (c) 2025 CowDogMoo
 // SPDX-License-Identifier: MIT
 
+// Package client provides the warpgate CLI client interface and implementations.
 package client
 
 // WarpgateClientInterface defines the interface for warpgate client operations
@@ -15,9 +16,11 @@ type WarpgateClientInterface interface {
 	// CLI execution
 	ExecuteCLI(args ...string) (string, error)
 	ExecuteCLIWithWorkdir(workdir string, args ...string) (string, error)
+	ExecuteCLIStreaming(callback OutputCallback, args ...string) (string, error)
 
 	// Build operations
 	WarpgateBuild(template string, opts BuildOptions) (string, error)
+	WarpgateBuildStreaming(template string, opts BuildOptions, callback OutputCallback) (string, error)
 	WarpgateValidate(configPath string, syntaxOnly bool) (string, error)
 	WarpgateInit(name string, opts InitOptions) (string, error)
 
@@ -42,6 +45,10 @@ type WarpgateClientInterface interface {
 	WarpgateConvert(source, output string) (string, error)
 	WarpgateValidateConfig(configPath string) (string, error)
 
+	// Registry operations
+	RegistryDelete(opts RegistryDeleteOptions) (string, error)
+	RegistryCopy(opts RegistryCopyOptions) (string, error)
+
 	// Task operations
 	ExecuteTask(taskName string, args map[string]string) (string, error)
 	ListTasks() ([]string, error)
@@ -61,8 +68,10 @@ type MockWarpgateClient struct {
 	// Mock responses - can be set per test
 	ExecuteCLIResponse       string
 	ExecuteCLIError          error
+	ExecuteCLIStreamingLines []string
 	BuildResponse            string
 	BuildError               error
+	BuildStreamingLines      []string
 	ValidateResponse         string
 	ValidateError            error
 	InitResponse             string
@@ -93,6 +102,10 @@ type MockWarpgateClient struct {
 	ConvertError             error
 	ValidateConfigResponse   string
 	ValidateConfigError      error
+	RegistryDeleteResponse   string
+	RegistryDeleteError      error
+	RegistryCopyResponse     string
+	RegistryCopyError        error
 	ExecuteTaskResponse      string
 	ExecuteTaskError         error
 	ListTasksResponse        []string
@@ -102,6 +115,7 @@ type MockWarpgateClient struct {
 	LastExecuteCLIArgs        []string
 	LastBuildTemplate         string
 	LastBuildOptions          BuildOptions
+	LastBuildCallback         OutputCallback
 	LastValidatePath          string
 	LastInitName              string
 	LastInitOptions           InitOptions
@@ -124,6 +138,8 @@ type MockWarpgateClient struct {
 	LastConvertSource         string
 	LastConvertOutput         string
 	LastValidateConfigPath    string
+	LastRegistryDeleteOptions RegistryDeleteOptions
+	LastRegistryCopyOptions   RegistryCopyOptions
 	LastExecuteTaskName       string
 	LastExecuteTaskArgs       map[string]string
 }
@@ -165,7 +181,7 @@ func (m *MockWarpgateClient) ExecuteCLI(args ...string) (string, error) {
 }
 
 // ExecuteCLIWithWorkdir mocks CLI execution with workdir
-func (m *MockWarpgateClient) ExecuteCLIWithWorkdir(workdir string, args ...string) (string, error) {
+func (m *MockWarpgateClient) ExecuteCLIWithWorkdir(_ string, args ...string) (string, error) {
 	m.LastExecuteCLIArgs = args
 	return m.ExecuteCLIResponse, m.ExecuteCLIError
 }
@@ -178,7 +194,7 @@ func (m *MockWarpgateClient) WarpgateBuild(template string, opts BuildOptions) (
 }
 
 // WarpgateValidate mocks the validate command
-func (m *MockWarpgateClient) WarpgateValidate(configPath string, syntaxOnly bool) (string, error) {
+func (m *MockWarpgateClient) WarpgateValidate(configPath string, _ bool) (string, error) {
 	m.LastValidatePath = configPath
 	return m.ValidateResponse, m.ValidateError
 }
@@ -284,4 +300,42 @@ func (m *MockWarpgateClient) ExecuteTask(taskName string, args map[string]string
 // ListTasks mocks the list tasks command
 func (m *MockWarpgateClient) ListTasks() ([]string, error) {
 	return m.ListTasksResponse, m.ListTasksError
+}
+
+// ExecuteCLIStreaming mocks streaming CLI execution
+func (m *MockWarpgateClient) ExecuteCLIStreaming(callback OutputCallback, args ...string) (string, error) {
+	m.LastExecuteCLIArgs = args
+	// Simulate streaming by calling callback for each line
+	for _, line := range m.ExecuteCLIStreamingLines {
+		if callback != nil {
+			callback(line)
+		}
+	}
+	return m.ExecuteCLIResponse, m.ExecuteCLIError
+}
+
+// WarpgateBuildStreaming mocks streaming build command
+func (m *MockWarpgateClient) WarpgateBuildStreaming(template string, opts BuildOptions, callback OutputCallback) (string, error) {
+	m.LastBuildTemplate = template
+	m.LastBuildOptions = opts
+	m.LastBuildCallback = callback
+	// Simulate streaming by calling callback for each line
+	for _, line := range m.BuildStreamingLines {
+		if callback != nil {
+			callback(line)
+		}
+	}
+	return m.BuildResponse, m.BuildError
+}
+
+// RegistryDelete mocks the registry delete command
+func (m *MockWarpgateClient) RegistryDelete(opts RegistryDeleteOptions) (string, error) {
+	m.LastRegistryDeleteOptions = opts
+	return m.RegistryDeleteResponse, m.RegistryDeleteError
+}
+
+// RegistryCopy mocks the registry copy command
+func (m *MockWarpgateClient) RegistryCopy(opts RegistryCopyOptions) (string, error) {
+	m.LastRegistryCopyOptions = opts
+	return m.RegistryCopyResponse, m.RegistryCopyError
 }

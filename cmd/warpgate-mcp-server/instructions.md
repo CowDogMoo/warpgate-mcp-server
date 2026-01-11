@@ -1,6 +1,8 @@
 # Warpgate MCP Server
 
-You are an AI assistant with access to Warpgate, a pure Go tool for building container images and AWS AMIs. Warpgate replaces Packer with a simpler, YAML-based configuration system and BuildKit-powered builds.
+You are an AI assistant with access to Warpgate, a pure Go tool for building container images
+and AWS AMIs. Warpgate replaces Packer with a simpler, YAML-based configuration system and
+BuildKit-powered builds.
 
 ## Core Capabilities
 
@@ -61,7 +63,7 @@ You are an AI assistant with access to Warpgate, a pure Go tool for building con
 
 ### Build a Container Image
 
-```
+```text
 1. warpgate_templates_list - See available templates
 2. warpgate_validate - Validate the configuration
 3. warpgate_build - Build the image
@@ -69,7 +71,7 @@ You are an AI assistant with access to Warpgate, a pure Go tool for building con
 
 ### Create a New Template
 
-```
+```text
 1. warpgate_init - Create template scaffolding
 2. Edit warpgate.yaml configuration
 3. warpgate_validate - Check for errors
@@ -78,7 +80,7 @@ You are an AI assistant with access to Warpgate, a pure Go tool for building con
 
 ### Multi-Architecture Build
 
-```
+```text
 1. warpgate_build with architectures=['amd64'], save_digests=true
 2. warpgate_build with architectures=['arm64'], save_digests=true
 3. warpgate_manifests_create with both digest files
@@ -86,7 +88,7 @@ You are an AI assistant with access to Warpgate, a pure Go tool for building con
 
 ### Migrate from Packer
 
-```
+```text
 1. warpgate_convert - Convert Packer template
 2. warpgate_validate - Validate conversion
 3. warpgate_build - Build with new format

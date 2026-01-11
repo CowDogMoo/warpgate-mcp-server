@@ -4,6 +4,7 @@
 package client
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 )
 
 // MinimumWarpgateVersion is the minimum supported warpgate CLI version
@@ -67,7 +69,7 @@ func NewWarpgateClient(repoPath string) (*WarpgateClient, error) {
 	// Verify the path exists and contains a Taskfile
 	taskfilePath := filepath.Join(repoPath, "Taskfile.yaml")
 	if _, err := os.Stat(taskfilePath); err != nil {
-		return nil, fmt.Errorf("Taskfile.yaml not found in %s: %w", repoPath, err)
+		return nil, fmt.Errorf("taskfile.yaml not found in %s: %w", repoPath, err)
 	}
 
 	client.repoPath = repoPath
@@ -88,7 +90,7 @@ func NewWarpgateClientWithBinary(repoPath, binaryPath string) (*WarpgateClient, 
 		// Verify the path exists and contains a Taskfile
 		taskfilePath := filepath.Join(repoPath, "Taskfile.yaml")
 		if _, err := os.Stat(taskfilePath); err != nil {
-			return nil, fmt.Errorf("Taskfile.yaml not found in %s: %w", repoPath, err)
+			return nil, fmt.Errorf("taskfile.yaml not found in %s: %w", repoPath, err)
 		}
 		client.repoPath = repoPath
 	}
@@ -206,7 +208,7 @@ func parseVersion(version string) [3]int {
 	parts := strings.Split(version, ".")
 	var result [3]int
 	for i := 0; i < 3 && i < len(parts); i++ {
-		fmt.Sscanf(parts[i], "%d", &result[i])
+		_, _ = fmt.Sscanf(parts[i], "%d", &result[i])
 	}
 	return result
 }
@@ -244,7 +246,7 @@ func (w *WarpgateClient) ExecuteTask(taskName string, args map[string]string) (s
 		}
 	}
 
-	cmd := exec.Command("task", cmdArgs...)
+	cmd := exec.Command("task", cmdArgs...) //nolint:gosec // G204: task execution with validated args
 	cmd.Dir = w.repoPath
 	cmd.Env = append(os.Environ(), "TASK_X_REMOTE_TASKFILES=1")
 
@@ -294,7 +296,7 @@ func (w *WarpgateClient) ExecuteCLI(args ...string) (string, error) {
 		return "", fmt.Errorf("warpgate CLI is not available")
 	}
 
-	cmd := exec.Command(w.binaryPath, args...)
+	cmd := exec.Command(w.binaryPath, args...) //nolint:gosec // G204: warpgate CLI execution with validated binary
 	if w.repoPath != "" {
 		cmd.Dir = w.repoPath
 	}
@@ -313,7 +315,7 @@ func (w *WarpgateClient) ExecuteCLIWithWorkdir(workdir string, args ...string) (
 		return "", fmt.Errorf("warpgate CLI is not available")
 	}
 
-	cmd := exec.Command(w.binaryPath, args...)
+	cmd := exec.Command(w.binaryPath, args...) //nolint:gosec // G204: warpgate CLI execution with validated binary
 	if workdir != "" {
 		cmd.Dir = workdir
 	}
@@ -600,4 +602,277 @@ func (w *WarpgateClient) WarpgateValidateConfig(configPath string) (string, erro
 	}
 
 	return w.ExecuteCLI(args...)
+}
+
+// OutputCallback is called for each line of output during streaming execution
+type OutputCallback func(line string)
+
+// ExecuteCLIStreaming runs a warpgate CLI command with streaming output
+func (w *WarpgateClient) ExecuteCLIStreaming(callback OutputCallback, args ...string) (string, error) {
+	if !w.cliDetected {
+		return "", fmt.Errorf("warpgate CLI is not available")
+	}
+
+	cmd := exec.Command(w.binaryPath, args...) //nolint:gosec // G204: warpgate CLI execution with validated binary
+	if w.repoPath != "" {
+		cmd.Dir = w.repoPath
+	}
+
+	// Create pipes for stdout and stderr
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return "", fmt.Errorf("failed to create stdout pipe: %w", err)
+	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return "", fmt.Errorf("failed to create stderr pipe: %w", err)
+	}
+
+	// Start the command
+	if err := cmd.Start(); err != nil {
+		return "", fmt.Errorf("failed to start command: %w", err)
+	}
+
+	// Collect all output
+	var outputBuilder strings.Builder
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	// Read stdout
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			line := scanner.Text()
+			mu.Lock()
+			outputBuilder.WriteString(line)
+			outputBuilder.WriteString("\n")
+			mu.Unlock()
+			if callback != nil {
+				callback(line)
+			}
+		}
+	}()
+
+	// Read stderr
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		scanner := bufio.NewScanner(stderr)
+		for scanner.Scan() {
+			line := scanner.Text()
+			mu.Lock()
+			outputBuilder.WriteString(line)
+			outputBuilder.WriteString("\n")
+			mu.Unlock()
+			if callback != nil {
+				callback(line)
+			}
+		}
+	}()
+
+	// Wait for goroutines to finish
+	wg.Wait()
+
+	// Wait for command to complete
+	err = cmd.Wait()
+	output := outputBuilder.String()
+
+	if err != nil {
+		return output, fmt.Errorf("warpgate command failed: %w\nOutput: %s", err, output)
+	}
+
+	return output, nil
+}
+
+// WarpgateBuildStreaming executes the warpgate build command with streaming output
+func (w *WarpgateClient) WarpgateBuildStreaming(template string, opts BuildOptions, callback OutputCallback) (string, error) {
+	args := []string{"build"}
+
+	if opts.Template != "" {
+		args = append(args, "--template", opts.Template)
+	} else if template != "" {
+		args = append(args, template)
+	}
+
+	if opts.Target != "" {
+		args = append(args, "--target", opts.Target)
+	}
+
+	for _, arch := range opts.Architectures {
+		args = append(args, "--arch", arch)
+	}
+
+	if opts.Push {
+		args = append(args, "--push")
+	}
+
+	if opts.Registry != "" {
+		args = append(args, "--registry", opts.Registry)
+	}
+
+	for key, value := range opts.Vars {
+		args = append(args, "--var", fmt.Sprintf("%s=%s", key, value))
+	}
+
+	for _, tag := range opts.Tags {
+		args = append(args, "--tag", tag)
+	}
+
+	if opts.NoCache {
+		args = append(args, "--no-cache")
+	}
+
+	if opts.SaveDigests {
+		args = append(args, "--save-digests")
+		if opts.DigestDir != "" {
+			args = append(args, "--digest-dir", opts.DigestDir)
+		}
+	}
+
+	return w.ExecuteCLIStreaming(callback, args...)
+}
+
+// RegistryDeleteOptions contains options for deleting images from a registry
+type RegistryDeleteOptions struct {
+	Name      string
+	Registry  string
+	Namespace string
+	Tags      []string
+	AuthFile  string
+	DryRun    bool
+}
+
+// RegistryCopyOptions contains options for copying images between registries
+type RegistryCopyOptions struct {
+	SourceImage     string
+	DestImage       string
+	SourceAuth      string
+	DestAuth        string
+	AllTags         bool
+	PreserveDigests bool
+}
+
+// DetectRegistryTool finds an available registry management tool
+func DetectRegistryTool() (string, error) {
+	tools := []string{"skopeo", "crane", "docker", "podman"}
+	for _, tool := range tools {
+		if path, err := exec.LookPath(tool); err == nil {
+			return path, nil
+		}
+	}
+	return "", fmt.Errorf("no registry tool found (tried: skopeo, crane, docker, podman)")
+}
+
+// RegistryDelete deletes an image from a container registry
+func (w *WarpgateClient) RegistryDelete(opts RegistryDeleteOptions) (string, error) {
+	toolPath, err := DetectRegistryTool()
+	if err != nil {
+		return "", err
+	}
+
+	tool := filepath.Base(toolPath)
+	var results strings.Builder
+
+	for _, tag := range opts.Tags {
+		imageRef := buildImageRef(opts.Registry, opts.Namespace, opts.Name, tag)
+
+		var args []string
+		switch tool {
+		case "skopeo":
+			args = []string{"delete"}
+			if opts.AuthFile != "" {
+				args = append(args, "--authfile", opts.AuthFile)
+			}
+			args = append(args, "docker://"+imageRef)
+		case "crane":
+			args = []string{"delete"}
+			args = append(args, imageRef)
+		case "docker", "podman":
+			// Docker/Podman use rmi for local, but we need registry delete
+			// These tools don't support direct registry deletion well
+			return "", fmt.Errorf("%s does not support direct registry deletion; use skopeo or crane", tool)
+		}
+
+		if opts.DryRun {
+			results.WriteString(fmt.Sprintf("[DRY RUN] Would delete: %s\n", imageRef))
+			continue
+		}
+
+		cmd := exec.Command(toolPath, args...) //nolint:gosec // G204: registry tool execution with detected binary
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return results.String(), fmt.Errorf("failed to delete %s: %w\nOutput: %s", imageRef, err, string(output))
+		}
+		results.WriteString(fmt.Sprintf("Deleted: %s\n", imageRef))
+	}
+
+	return results.String(), nil
+}
+
+// RegistryCopy copies an image between registries
+func (w *WarpgateClient) RegistryCopy(opts RegistryCopyOptions) (string, error) {
+	toolPath, err := DetectRegistryTool()
+	if err != nil {
+		return "", err
+	}
+
+	tool := filepath.Base(toolPath)
+	var args []string
+
+	switch tool {
+	case "skopeo":
+		args = []string{"copy"}
+		if opts.AllTags {
+			args = append(args, "--all")
+		}
+		if opts.PreserveDigests {
+			args = append(args, "--preserve-digests")
+		}
+		if opts.SourceAuth != "" {
+			args = append(args, "--src-authfile", opts.SourceAuth)
+		}
+		if opts.DestAuth != "" {
+			args = append(args, "--dest-authfile", opts.DestAuth)
+		}
+		args = append(args, "docker://"+opts.SourceImage, "docker://"+opts.DestImage)
+	case "crane":
+		if opts.AllTags {
+			args = []string{"copy", "--all-tags"}
+		} else {
+			args = []string{"copy"}
+		}
+		args = append(args, opts.SourceImage, opts.DestImage)
+	case "docker", "podman":
+		// Docker/Podman require pull-tag-push workflow
+		return "", fmt.Errorf("%s requires pull-tag-push workflow; use skopeo or crane for direct copy", tool)
+	}
+
+	cmd := exec.Command(toolPath, args...) //nolint:gosec // G204: registry tool execution with detected binary
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return string(output), fmt.Errorf("failed to copy image: %w\nOutput: %s", err, string(output))
+	}
+
+	return fmt.Sprintf("Successfully copied %s to %s\n%s", opts.SourceImage, opts.DestImage, string(output)), nil
+}
+
+// buildImageRef constructs a full image reference from components
+func buildImageRef(registry, namespace, name, tag string) string {
+	var ref strings.Builder
+	if registry != "" {
+		ref.WriteString(registry)
+		ref.WriteString("/")
+	}
+	if namespace != "" {
+		ref.WriteString(namespace)
+		ref.WriteString("/")
+	}
+	ref.WriteString(name)
+	if tag != "" {
+		ref.WriteString(":")
+		ref.WriteString(tag)
+	}
+	return ref.String()
 }

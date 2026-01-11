@@ -367,7 +367,7 @@ Run the GitHub Actions image-builder workflow locally.
 2. warpgate_registry_inspect - Get manifest details and architectures
 ```
 
-## Resources
+## MCP Resources
 
 The server provides access to these MCP resources:
 

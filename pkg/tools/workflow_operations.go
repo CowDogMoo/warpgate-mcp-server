@@ -24,7 +24,7 @@ func listTasks(s *server.MCPServer, logger *logging.Logger, warpgatePath string)
 		},
 	}
 
-	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		wg, err := client.NewWarpgateClient(warpgatePath)
 		if err != nil {
 			logger.Errorf("Failed to create Warpgate client: %v", err)
@@ -74,7 +74,7 @@ func runTask(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
 		},
 	}
 
-	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		taskName, ok := request.Params.Arguments["task_name"].(string)
 		if !ok {
 			return mcp.NewToolResultError("task_name must be a string"), nil
@@ -120,7 +120,7 @@ func runImageBuilder(s *server.MCPServer, logger *logging.Logger, warpgatePath s
 		},
 	}
 
-	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		wg, err := client.NewWarpgateClient(warpgatePath)
 		if err != nil {
 			logger.Errorf("Failed to create Warpgate client: %v", err)

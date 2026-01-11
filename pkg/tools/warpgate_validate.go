@@ -33,7 +33,7 @@ func warpgateValidate(s *server.MCPServer, logger *logging.Logger, warpgatePath 
 		},
 	}
 
-	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		template, ok := request.Params.Arguments["template"].(string)
 		if !ok || template == "" {
 			return mcp.NewToolResultError("template is required and must be a string"), nil

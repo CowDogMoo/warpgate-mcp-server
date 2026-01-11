@@ -135,7 +135,7 @@ func TestNewWarpgateClientWithValidPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	taskfileContent := `version: '3'
 tasks:
@@ -143,7 +143,7 @@ tasks:
     cmds:
       - echo "test"
 `
-	if err := os.WriteFile(filepath.Join(tmpDir, "Taskfile.yaml"), []byte(taskfileContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "Taskfile.yaml"), []byte(taskfileContent), 0644); err != nil { //nolint:gosec // G306: test file permissions
 		t.Fatalf("Failed to create Taskfile: %v", err)
 	}
 
@@ -163,7 +163,7 @@ func TestNewWarpgateClientWithInvalidPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	_, err = NewWarpgateClient(tmpDir)
 	if err == nil {
@@ -375,8 +375,8 @@ func TestNewWarpgateClientWithBinaryInvalidRepoPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer os.Remove(tmpFile.Name())
-	tmpFile.Close()
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
+	_ = tmpFile.Close()
 
 	// This will fail because the binary can't be executed for version check
 	_, err = NewWarpgateClientWithBinary("/nonexistent/repo", tmpFile.Name())
@@ -392,7 +392,7 @@ func TestListTasksWithParsing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	taskfileContent := `version: '3'
 tasks:
@@ -400,7 +400,7 @@ tasks:
     cmds:
       - echo "test"
 `
-	if err := os.WriteFile(filepath.Join(tmpDir, "Taskfile.yaml"), []byte(taskfileContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "Taskfile.yaml"), []byte(taskfileContent), 0644); err != nil { //nolint:gosec // G306: test file permissions
 		t.Fatalf("Failed to create Taskfile: %v", err)
 	}
 
@@ -419,7 +419,7 @@ func TestExecuteTaskStructure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	taskfileContent := `version: '3'
 tasks:
@@ -427,7 +427,7 @@ tasks:
     cmds:
       - echo "test"
 `
-	if err := os.WriteFile(filepath.Join(tmpDir, "Taskfile.yaml"), []byte(taskfileContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "Taskfile.yaml"), []byte(taskfileContent), 0644); err != nil { //nolint:gosec // G306: test file permissions
 		t.Fatalf("Failed to create Taskfile: %v", err)
 	}
 

@@ -1,6 +1,7 @@
 // Copyright (c) 2025 CowDogMoo
 // SPDX-License-Identifier: MIT
 
+// Package main provides the warpgate-mcp-server CLI application.
 package main
 
 import (
@@ -23,6 +24,11 @@ import (
 
 //go:embed instructions.md
 var instructions string
+
+// Instructions returns the embedded instruction content for the MCP server
+func Instructions() string {
+	return instructions
+}
 
 func runStdioServer(logger *logging.Logger, warpgatePath string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -82,7 +88,7 @@ var (
 		Use:   "stdio",
 		Short: "Start stdio server",
 		Long:  `Start a server that communicates via standard input/output streams using JSON-RPC messages.`,
-		Run: func(cmd *cobra.Command, _ []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			logFile, err := rootCmd.PersistentFlags().GetString("log-file")
 			if err != nil {
 				stdlog.Fatal("Failed to get log file:", err)

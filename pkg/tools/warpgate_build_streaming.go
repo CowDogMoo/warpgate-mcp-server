@@ -6,6 +6,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/cowdogmoo/warpgate-mcp-server/pkg/client"
 	"github.com/cowdogmoo/warpgate-mcp-server/pkg/logging"
@@ -13,10 +14,10 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
-func warpgateBuild(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
+func warpgateBuildStreaming(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
 	tool := mcp.Tool{
-		Name:        "warpgate_build",
-		Description: "Build a container image or AMI using the warpgate CLI. Supports building from local config files, named templates from the registry, or git repositories.",
+		Name:        "warpgate_build_streaming",
+		Description: "Build a container image or AMI with real-time progress output. Uses MCP logging notifications to stream build output line by line. Ideal for long-running builds where progress visibility is important.",
 		InputSchema: mcp.ToolInputSchema{
 			Type: "object",
 			Properties: map[string]interface{}{
@@ -75,7 +76,7 @@ func warpgateBuild(s *server.MCPServer, logger *logging.Logger, warpgatePath str
 		},
 	}
 
-	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		template, ok := request.Params.Arguments["template"].(string)
 		if !ok || template == "" {
 			return mcp.NewToolResultError("template is required and must be a string"), nil
@@ -143,13 +144,73 @@ func warpgateBuild(s *server.MCPServer, logger *logging.Logger, warpgatePath str
 			opts.DigestDir = digestDir
 		}
 
-		output, err := wg.WarpgateBuild(template, opts)
+		// Get the MCP server from context for sending notifications
+		mcpServer := server.ServerFromContext(ctx)
+
+		// Track line count for progress
+		var lineCount int
+		var outputLines []string
+
+		// Create callback for streaming output
+		callback := func(line string) {
+			lineCount++
+			outputLines = append(outputLines, line)
+
+			// Log to our logger
+			logger.Infof("[BUILD] %s", line)
+
+			// Send logging notification to MCP client if server is available
+			if mcpServer != nil {
+				// Determine log level based on line content
+				lineLower := strings.ToLower(line)
+				var level string
+				switch {
+				case strings.Contains(lineLower, "error") || strings.Contains(lineLower, "failed"):
+					level = "error"
+				case strings.Contains(lineLower, "warning") || strings.Contains(lineLower, "warn"):
+					level = "warning"
+				case strings.Contains(lineLower, "step") || strings.Contains(lineLower, "building"):
+					level = "notice"
+				default:
+					level = "info"
+				}
+
+				// Send notification (best effort, ignore errors)
+				_ = mcpServer.SendNotificationToClient("notifications/logging/message", map[string]interface{}{
+					"level":  level,
+					"logger": "warpgate.build",
+					"data":   line,
+				})
+			}
+		}
+
+		// Run the streaming build
+		output, err := wg.WarpgateBuildStreaming(template, opts, callback)
 		if err != nil {
 			logger.Errorf("Build failed: %v", err)
+
+			// Send error notification
+			if mcpServer != nil {
+				_ = mcpServer.SendNotificationToClient("notifications/logging/message", map[string]interface{}{
+					"level":  "error",
+					"logger": "warpgate.build",
+					"data":   fmt.Sprintf("Build failed: %v", err),
+				})
+			}
+
 			return mcp.NewToolResultError(fmt.Sprintf("Build failed: %v\n%s", err, output)), nil
 		}
 
-		logger.Infof("Build completed successfully for template: %s", template)
+		// Send completion notification
+		if mcpServer != nil {
+			_ = mcpServer.SendNotificationToClient("notifications/logging/message", map[string]interface{}{
+				"level":  "notice",
+				"logger": "warpgate.build",
+				"data":   fmt.Sprintf("Build completed successfully (%d lines of output)", lineCount),
+			})
+		}
+
+		logger.Infof("Build completed successfully for template: %s (%d lines)", template, lineCount)
 		return mcp.NewToolResultText(output), nil
 	}
 

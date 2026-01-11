@@ -18,16 +18,16 @@ func createTestLogger(t *testing.T) (*logging.Logger, func()) {
 	if err != nil {
 		t.Fatalf("Failed to create temp log file: %v", err)
 	}
-	tmpFile.Close()
+	_ = tmpFile.Close()
 
 	logger, err := logging.NewLogger(tmpFile.Name())
 	if err != nil {
-		os.Remove(tmpFile.Name())
+		_ = os.Remove(tmpFile.Name())
 		t.Fatalf("Failed to create logger: %v", err)
 	}
 
 	cleanup := func() {
-		os.Remove(tmpFile.Name())
+		_ = os.Remove(tmpFile.Name())
 	}
 
 	return logger, cleanup
@@ -46,13 +46,13 @@ tasks:
     cmds:
       - echo "test"
 `
-	if err := os.WriteFile(filepath.Join(tmpDir, "Taskfile.yaml"), []byte(taskfile), 0644); err != nil {
-		os.RemoveAll(tmpDir)
+	if err := os.WriteFile(filepath.Join(tmpDir, "Taskfile.yaml"), []byte(taskfile), 0644); err != nil { //nolint:gosec // G306: test file permissions
+		_ = os.RemoveAll(tmpDir)
 		t.Fatalf("Failed to create Taskfile: %v", err)
 	}
 
 	cleanup := func() {
-		os.RemoveAll(tmpDir)
+		_ = os.RemoveAll(tmpDir)
 	}
 
 	return tmpDir, cleanup
@@ -149,8 +149,8 @@ func TestResourcesWithLoggerOutput(t *testing.T) {
 		t.Fatalf("Failed to create temp log file: %v", err)
 	}
 	logPath := tmpLogFile.Name()
-	tmpLogFile.Close()
-	defer os.Remove(logPath)
+	_ = tmpLogFile.Close()
+	defer func() { _ = os.Remove(logPath) }()
 
 	logger, err := logging.NewLogger(logPath)
 	if err != nil {

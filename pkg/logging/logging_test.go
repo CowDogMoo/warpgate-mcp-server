@@ -14,8 +14,8 @@ func TestNewLoggerWithFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer os.Remove(tmpFile.Name())
-	tmpFile.Close()
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
+	_ = tmpFile.Close()
 
 	logger, err := NewLogger(tmpFile.Name())
 	if err != nil {
@@ -67,8 +67,8 @@ func TestLoggerWriter(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer os.Remove(tmpFile.Name())
-	tmpFile.Close()
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
+	_ = tmpFile.Close()
 
 	logger, err := NewLogger(tmpFile.Name())
 	if err != nil {

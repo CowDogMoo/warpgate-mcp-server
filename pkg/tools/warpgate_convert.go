@@ -33,7 +33,7 @@ func warpgateConvert(s *server.MCPServer, logger *logging.Logger, warpgatePath s
 		},
 	}
 
-	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		source, ok := request.Params.Arguments["source"].(string)
 		if !ok || source == "" {
 			return mcp.NewToolResultError("source is required and must be a string"), nil

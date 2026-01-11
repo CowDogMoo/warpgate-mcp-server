@@ -1,6 +1,7 @@
 // Copyright (c) 2025 CowDogMoo
 // SPDX-License-Identifier: MIT
 
+// Package logging provides structured logging utilities for the warpgate-mcp-server.
 package logging
 
 import (
@@ -29,7 +30,7 @@ func NewLogger(outPath string) (*Logger, error) {
 			Level: slog.LevelDebug,
 		})
 	} else {
-		file, err := os.OpenFile(outPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		file, err := os.OpenFile(outPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666) //nolint:gosec // G302: log files need to be readable by operators
 		if err != nil {
 			return nil, fmt.Errorf("failed to open log file: %w", err)
 		}

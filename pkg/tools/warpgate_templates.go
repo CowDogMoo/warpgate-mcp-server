@@ -35,7 +35,7 @@ func warpgateTemplatesList(s *server.MCPServer, logger *logging.Logger, warpgate
 		},
 	}
 
-	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		wg, err := client.NewWarpgateClient(warpgatePath)
 		if err != nil {
 			logger.Errorf("Failed to create Warpgate client: %v", err)
@@ -84,7 +84,7 @@ func warpgateTemplatesInfo(s *server.MCPServer, logger *logging.Logger, warpgate
 		},
 	}
 
-	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		template, ok := request.Params.Arguments["template"].(string)
 		if !ok || template == "" {
 			return mcp.NewToolResultError("template is required and must be a string"), nil
@@ -132,7 +132,7 @@ func warpgateTemplatesAdd(s *server.MCPServer, logger *logging.Logger, warpgateP
 		},
 	}
 
-	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		source, ok := request.Params.Arguments["source"].(string)
 		if !ok || source == "" {
 			return mcp.NewToolResultError("source is required and must be a string"), nil
@@ -182,7 +182,7 @@ func warpgateTemplatesRemove(s *server.MCPServer, logger *logging.Logger, warpga
 		},
 	}
 
-	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		name, ok := request.Params.Arguments["name"].(string)
 		if !ok || name == "" {
 			return mcp.NewToolResultError("name is required and must be a string"), nil

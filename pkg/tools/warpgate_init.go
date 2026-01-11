@@ -37,7 +37,7 @@ func warpgateInit(s *server.MCPServer, logger *logging.Logger, warpgatePath stri
 		},
 	}
 
-	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		name, ok := request.Params.Arguments["name"].(string)
 		if !ok || name == "" {
 			return mcp.NewToolResultError("name is required and must be a string"), nil
