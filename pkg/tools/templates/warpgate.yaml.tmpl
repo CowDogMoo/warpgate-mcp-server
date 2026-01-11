@@ -1,0 +1,69 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/cowdogmoo/warpgate/main/schema/warpgate-template.json
+metadata:
+  name: {{.TemplateName}}
+  version: 1.0.0
+  description: "{{.Description}}"
+  author: ""
+  license: MIT
+  tags:
+    - custom
+  requires:
+    warpgate: ">=1.0.0"
+
+name: {{.TemplateName}}
+version: latest
+
+base:
+  image: {{.BaseImage}}:{{.BaseImageVersion}}
+  pull: true
+
+provisioners:
+  - type: shell
+    inline:
+      - apt-get update
+      - apt-get install -y curl
+      - echo "Hello from {{.TemplateName}}!"
+
+  # Example: Using a script file
+  # - type: script
+  #   path: scripts/setup.sh
+
+  # Example: Using Ansible
+  # - type: ansible
+  #   playbook: playbooks/main.yaml
+  #   galaxy_requirements: requirements.yaml
+
+targets:
+  - type: container
+    registry: ghcr.io/yourorg
+    tags:
+      - latest
+      - "{{`{{.Version}}`}}"
+    platforms:
+{{- if .Platforms}}
+{{- range .Platforms}}
+      - {{.}}
+{{- end}}
+{{- else}}
+      - linux/amd64
+      - linux/arm64
+{{- end}}
+{{- if .IncludeAMI}}
+
+  - type: ami
+    region: us-east-1
+    instance_type: t3.medium
+    source_ami_filter:
+      filters:
+        name: "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"
+        root-device-type: ebs
+        virtualization-type: hvm
+      owners:
+        - "099720109477"  # Canonical
+      most_recent: true
+    ssh_username: ubuntu
+    ami_name: "{{.TemplateName}}-{{`{{timestamp}}`}}"
+{{- end}}
+
+variables:
+  example_var: "example_value"

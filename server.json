@@ -2,12 +2,12 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
   "name": "io.github.cowdogmoo/warpgate-mcp-server",
   "title": "Warpgate",
-  "description": "Manage Warpgate templates and workflows for building security labs and multi-architecture containers",
+  "description": "Build and manage container images and AWS AMIs using Warpgate CLI. Supports YAML-based templates, BuildKit builds, multi-architecture manifests, and template registry management.",
   "repository": {
     "url": "https://github.com/cowdogmoo/warpgate-mcp-server",
     "source": "github"
   },
-  "version": "0.1.0",
+  "version": "0.2.0",
   "packages": [
     {
       "registryType": "oci",
@@ -75,20 +75,14 @@
       ],
       "environmentVariables": [
         {
-          "name": "TASK_X_REMOTE_TASKFILES",
-          "description": "Enable remote taskfile loading",
-          "default": "1",
+          "name": "WARPGATE_REGISTRY",
+          "description": "Default container registry for pushes",
           "isRequired": false
         },
         {
-          "name": "PACKER_LOG",
-          "description": "Enable Packer debug logging",
-          "default": "0",
-          "format": "boolean",
-          "choices": [
-            "0",
-            "1"
-          ],
+          "name": "WARPGATE_LOG_LEVEL",
+          "description": "Log level (debug, info, warn, error)",
+          "default": "info",
           "isRequired": false
         }
       ]

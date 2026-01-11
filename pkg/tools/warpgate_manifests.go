@@ -1,0 +1,145 @@
+// Copyright (c) 2025 CowDogMoo
+// SPDX-License-Identifier: MIT
+
+package tools
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/cowdogmoo/warpgate-mcp-server/pkg/client"
+	"github.com/cowdogmoo/warpgate-mcp-server/pkg/logging"
+	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
+)
+
+func warpgateManifestsCreate(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
+	tool := mcp.Tool{
+		Name:        "warpgate_manifests_create",
+		Description: "Create a multi-architecture manifest from digest files generated during separate architecture builds",
+		InputSchema: mcp.ToolInputSchema{
+			Type: "object",
+			Properties: map[string]interface{}{
+				"name": map[string]interface{}{
+					"type":        "string",
+					"description": "Name for the multi-arch manifest (e.g., 'registry/image:tag')",
+				},
+				"images": map[string]interface{}{
+					"type":        "array",
+					"description": "List of image references or digest files to include in the manifest",
+					"items": map[string]interface{}{
+						"type": "string",
+					},
+				},
+				"push": map[string]interface{}{
+					"type":        "boolean",
+					"description": "Push the manifest to the registry after creation",
+				},
+			},
+			Required: []string{"name", "images"},
+		},
+	}
+
+	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		name, ok := request.Params.Arguments["name"].(string)
+		if !ok || name == "" {
+			return mcp.NewToolResultError("name is required and must be a string"), nil
+		}
+
+		imagesRaw, ok := request.Params.Arguments["images"].([]interface{})
+		if !ok || len(imagesRaw) == 0 {
+			return mcp.NewToolResultError("images is required and must be a non-empty array"), nil
+		}
+
+		var images []string
+		for _, img := range imagesRaw {
+			if s, ok := img.(string); ok {
+				images = append(images, s)
+			}
+		}
+
+		if len(images) == 0 {
+			return mcp.NewToolResultError("images must contain valid string values"), nil
+		}
+
+		wg, err := client.NewWarpgateClient(warpgatePath)
+		if err != nil {
+			logger.Errorf("Failed to create Warpgate client: %v", err)
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to create Warpgate client: %v", err)), nil
+		}
+
+		if !wg.IsCLIAvailable() {
+			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 1.0.0"), nil
+		}
+
+		push := false
+		if val, ok := request.Params.Arguments["push"].(bool); ok {
+			push = val
+		}
+
+		output, err := wg.WarpgateManifestsCreate(name, images, push)
+		if err != nil {
+			logger.Errorf("Failed to create manifest: %v", err)
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to create manifest: %v\n%s", err, output)), nil
+		}
+
+		logger.Infof("Successfully created manifest: %s", name)
+		return mcp.NewToolResultText(output), nil
+	}
+
+	s.AddTool(tool, handler)
+}
+
+func warpgateManifestsPush(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
+	tool := mcp.Tool{
+		Name:        "warpgate_manifests_push",
+		Description: "Push a multi-architecture manifest to the container registry",
+		InputSchema: mcp.ToolInputSchema{
+			Type: "object",
+			Properties: map[string]interface{}{
+				"name": map[string]interface{}{
+					"type":        "string",
+					"description": "Name of the manifest to push (e.g., 'registry/image:tag')",
+				},
+				"purge": map[string]interface{}{
+					"type":        "boolean",
+					"description": "Purge local manifest after pushing",
+				},
+			},
+			Required: []string{"name"},
+		},
+	}
+
+	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		name, ok := request.Params.Arguments["name"].(string)
+		if !ok || name == "" {
+			return mcp.NewToolResultError("name is required and must be a string"), nil
+		}
+
+		wg, err := client.NewWarpgateClient(warpgatePath)
+		if err != nil {
+			logger.Errorf("Failed to create Warpgate client: %v", err)
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to create Warpgate client: %v", err)), nil
+		}
+
+		if !wg.IsCLIAvailable() {
+			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 1.0.0"), nil
+		}
+
+		purge := false
+		if val, ok := request.Params.Arguments["purge"].(bool); ok {
+			purge = val
+		}
+
+		output, err := wg.WarpgateManifestsPush(name, purge)
+		if err != nil {
+			logger.Errorf("Failed to push manifest: %v", err)
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to push manifest: %v\n%s", err, output)), nil
+		}
+
+		logger.Infof("Successfully pushed manifest: %s", name)
+		return mcp.NewToolResultText(output), nil
+	}
+
+	s.AddTool(tool, handler)
+}

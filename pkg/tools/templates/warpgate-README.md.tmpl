@@ -1,0 +1,61 @@
+# {{.Title}}
+
+{{.Description}}
+
+## Prerequisites
+
+- [Warpgate CLI](https://github.com/CowDogMoo/warpgate) >= 1.0.0
+- Docker (for container builds)
+{{- if .IncludeAMI}}
+- AWS credentials (for AMI builds)
+{{- end}}
+
+## Usage
+
+### Validate
+
+```bash
+warpgate validate warpgate.yaml
+```
+
+### Build Container
+
+```bash
+# Build for current architecture
+warpgate build warpgate.yaml
+
+# Build for specific architecture
+warpgate build warpgate.yaml --arch amd64
+
+# Build and push to registry
+warpgate build warpgate.yaml --push
+```
+{{- if .IncludeAMI}}
+
+### Build AMI
+
+```bash
+warpgate build warpgate.yaml --target ami --region us-east-1
+```
+{{- end}}
+
+## Configuration
+
+Edit `warpgate.yaml` to customize:
+- Base image and version
+- Provisioning steps (shell, script, or ansible)
+- Target platforms and registries
+- Variables
+
+## Directory Structure
+
+```
+{{.TemplateName}}/
+├── warpgate.yaml    # Main template configuration
+├── README.md        # This file
+└── scripts/         # Provisioning scripts (optional)
+```
+
+## License
+
+MIT

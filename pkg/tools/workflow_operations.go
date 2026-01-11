@@ -105,35 +105,6 @@ func runTask(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
 	s.AddTool(tool, handler)
 }
 
-func runPreCommit(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
-	tool := mcp.Tool{
-		Name:        "run_precommit",
-		Description: "Run pre-commit hooks to validate code quality",
-		InputSchema: mcp.ToolInputSchema{
-			Type:       "object",
-			Properties: map[string]interface{}{},
-		},
-	}
-
-	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		wg, err := client.NewWarpgateClient(warpgatePath)
-		if err != nil {
-			logger.Errorf("Failed to create Warpgate client: %v", err)
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to create Warpgate client: %v", err)), nil
-		}
-
-		output, err := wg.ExecuteTask("run-pre-commit", nil)
-		if err != nil {
-			logger.Errorf("Failed to run pre-commit: %v", err)
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to run pre-commit: %v\n%s", err, output)), nil
-		}
-
-		return mcp.NewToolResultText(output), nil
-	}
-
-	s.AddTool(tool, handler)
-}
-
 func runImageBuilder(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
 	tool := mcp.Tool{
 		Name:        "run_image_builder",
