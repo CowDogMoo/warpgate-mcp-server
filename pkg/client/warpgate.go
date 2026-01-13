@@ -138,11 +138,17 @@ func (w *WarpgateClient) getWarpgateVersion(binaryPath string) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("failed to execute warpgate version: %w", err)
 		}
+
+		outputStr := string(output)
+		if strings.Contains(strings.ToLower(outputStr), "dev") {
+			return "dev", nil
+		}
+
 		// Parse version from output like "warpgate version v3.0.1"
 		re := regexp.MustCompile(`v?(\d+\.\d+\.\d+)`)
-		matches := re.FindStringSubmatch(string(output))
+		matches := re.FindStringSubmatch(outputStr)
 		if len(matches) < 2 {
-			return "", fmt.Errorf("could not parse version from output: %s", string(output))
+			return "", fmt.Errorf("could not parse version from output: %s", outputStr)
 		}
 		return matches[1], nil
 	}
@@ -160,6 +166,10 @@ func (w *WarpgateClient) getWarpgateVersion(binaryPath string) (string, error) {
 
 // isVersionCompatible checks if version >= minVersion using semantic versioning
 func isVersionCompatible(version, minVersion string) bool {
+	if strings.ToLower(version) == "dev" {
+		return true
+	}
+
 	v1Parts := parseVersion(version)
 	v2Parts := parseVersion(minVersion)
 
