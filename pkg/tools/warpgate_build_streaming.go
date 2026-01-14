@@ -118,6 +118,17 @@ func warpgateBuildStreaming(s *server.MCPServer, logger *logging.Logger, warpgat
 		// Get the MCP server from context for sending notifications
 		mcpServer := server.ServerFromContext(ctx)
 
+		// Create build-specific log file
+		buildLogFile, buildLogPath, err := logging.CreateBuildLogFile(template)
+		if err != nil {
+			logger.Warnf("Failed to create build log file: %v (continuing without file logging)", err)
+		}
+		defer func() {
+			if buildLogFile != nil {
+				_ = buildLogFile.Close()
+			}
+		}()
+
 		// Track line count for progress
 		var lineCount int
 		var outputLines []string
@@ -129,6 +140,11 @@ func warpgateBuildStreaming(s *server.MCPServer, logger *logging.Logger, warpgat
 
 			// Log to our logger
 			logger.Infof("[BUILD] %s", line)
+
+			// Write to build-specific log file
+			if buildLogFile != nil {
+				_, _ = fmt.Fprintf(buildLogFile, "%s\n", line)
+			}
 
 			// Send logging notification to MCP client if server is available
 			if mcpServer != nil {
@@ -160,6 +176,11 @@ func warpgateBuildStreaming(s *server.MCPServer, logger *logging.Logger, warpgat
 		if err != nil {
 			logger.Errorf("Build failed: %v", err)
 
+			// Write error to log file
+			if buildLogFile != nil {
+				_, _ = fmt.Fprintf(buildLogFile, "\n--- BUILD FAILED ---\nError: %v\n", err)
+			}
+
 			// Send error notification
 			if mcpServer != nil {
 				_ = mcpServer.SendNotificationToClient(ctx, "notifications/logging/message", map[string]interface{}{
@@ -169,7 +190,16 @@ func warpgateBuildStreaming(s *server.MCPServer, logger *logging.Logger, warpgat
 				})
 			}
 
-			return mcp.NewToolResultError(fmt.Sprintf("Build failed: %v\n%s", err, output)), nil
+			errorMsg := fmt.Sprintf("Build failed: %v\n%s", err, output)
+			if buildLogPath != "" {
+				errorMsg += fmt.Sprintf("\n\nFull build log: %s", buildLogPath)
+			}
+			return mcp.NewToolResultError(errorMsg), nil
+		}
+
+		// Write success footer to log file
+		if buildLogFile != nil {
+			_, _ = fmt.Fprintf(buildLogFile, "\n--- BUILD COMPLETED SUCCESSFULLY ---\n")
 		}
 
 		// Send completion notification
@@ -182,7 +212,13 @@ func warpgateBuildStreaming(s *server.MCPServer, logger *logging.Logger, warpgat
 		}
 
 		logger.Infof("Build completed successfully for template: %s (%d lines)", template, lineCount)
-		return mcp.NewToolResultText(output), nil
+
+		// Include log file path in response
+		successMsg := output
+		if buildLogPath != "" {
+			successMsg += fmt.Sprintf("\n\nFull build log saved to: %s", buildLogPath)
+		}
+		return mcp.NewToolResultText(successMsg), nil
 	}
 
 	s.AddTool(tool, handler)
