@@ -532,6 +532,28 @@ func (w *WarpgateClient) WarpgateValidateConfig(configPath string) (string, erro
 // OutputCallback is called for each line of output during streaming execution
 type OutputCallback func(line string)
 
+// splitLinesOrCarriageReturn is a custom split function for bufio.Scanner
+// that splits on both newlines (\n) and carriage returns (\r)
+func splitLinesOrCarriageReturn(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
+	}
+
+	// Look for \n or \r
+	if i := strings.IndexAny(string(data), "\n\r"); i >= 0 {
+		// Return the line (without the delimiter)
+		return i + 1, data[0:i], nil
+	}
+
+	// If we're at EOF, return remaining data
+	if atEOF {
+		return len(data), data, nil
+	}
+
+	// Request more data
+	return 0, nil, nil
+}
+
 // ExecuteCLIStreaming runs a warpgate CLI command with streaming output
 func (w *WarpgateClient) ExecuteCLIStreaming(callback OutputCallback, args ...string) (string, error) {
 	if !w.cliDetected {
@@ -568,6 +590,7 @@ func (w *WarpgateClient) ExecuteCLIStreaming(callback OutputCallback, args ...st
 	go func() {
 		defer wg.Done()
 		scanner := bufio.NewScanner(stdout)
+		scanner.Split(splitLinesOrCarriageReturn)
 		for scanner.Scan() {
 			line := scanner.Text()
 			mu.Lock()
@@ -585,6 +608,7 @@ func (w *WarpgateClient) ExecuteCLIStreaming(callback OutputCallback, args ...st
 	go func() {
 		defer wg.Done()
 		scanner := bufio.NewScanner(stderr)
+		scanner.Split(splitLinesOrCarriageReturn)
 		for scanner.Scan() {
 			line := scanner.Text()
 			mu.Lock()

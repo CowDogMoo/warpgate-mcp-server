@@ -267,3 +267,65 @@ func TestMockWarpgateClientRegistryCopy(t *testing.T) {
 		t.Error("Expected PreserveDigests to be true")
 	}
 }
+
+func TestSplitLinesOrCarriageReturn(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     string
+		expected []string
+	}{
+		{
+			name:     "newline separated",
+			data:     "line1\nline2\nline3",
+			expected: []string{"line1", "line2", "line3"},
+		},
+		{
+			name:     "carriage return separated",
+			data:     "progress 10%\rprogress 50%\rprogress 100%",
+			expected: []string{"progress 10%", "progress 50%", "progress 100%"},
+		},
+		{
+			name:     "mixed separators",
+			data:     "line1\nline2\rprogress\nline4",
+			expected: []string{"line1", "line2", "progress", "line4"},
+		},
+		{
+			name:     "single line",
+			data:     "single line only",
+			expected: []string{"single line only"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var result []string
+			data := []byte(tt.data)
+			offset := 0
+
+			for offset < len(data) {
+				advance, token, err := splitLinesOrCarriageReturn(data[offset:], offset+len(data[offset:]) >= len(data))
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+				if advance == 0 {
+					break
+				}
+				if len(token) > 0 {
+					result = append(result, string(token))
+				}
+				offset += advance
+			}
+
+			if len(result) != len(tt.expected) {
+				t.Errorf("Expected %d lines, got %d: %v", len(tt.expected), len(result), result)
+				return
+			}
+
+			for i := range result {
+				if result[i] != tt.expected[i] {
+					t.Errorf("Line %d: expected %q, got %q", i, tt.expected[i], result[i])
+				}
+			}
+		})
+	}
+}

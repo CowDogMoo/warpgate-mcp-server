@@ -131,20 +131,13 @@ func warpgateBuildStreaming(s *server.MCPServer, logger *logging.Logger, warpgat
 
 		// Track line count for progress
 		var lineCount int
-		var outputLines []string
 
 		// Create callback for streaming output
 		callback := func(line string) {
 			lineCount++
-			outputLines = append(outputLines, line)
 
 			// Log to our logger
 			logger.Infof("[BUILD] %s", line)
-
-			// Write to build-specific log file
-			if buildLogFile != nil {
-				_, _ = fmt.Fprintf(buildLogFile, "%s\n", line)
-			}
 
 			// Send logging notification to MCP client if server is available
 			if mcpServer != nil {
@@ -173,12 +166,19 @@ func warpgateBuildStreaming(s *server.MCPServer, logger *logging.Logger, warpgat
 
 		// Run the streaming build
 		output, err := wg.WarpgateBuildStreaming(template, opts, callback)
+
+		// Write complete output to log file (EXACTLY what you'd see in terminal)
+		if buildLogFile != nil {
+			_, _ = fmt.Fprintf(buildLogFile, "%s", output)
+			_ = buildLogFile.Sync()
+		}
 		if err != nil {
 			logger.Errorf("Build failed: %v", err)
 
-			// Write error to log file
+			// Write failure marker to log file
 			if buildLogFile != nil {
 				_, _ = fmt.Fprintf(buildLogFile, "\n--- BUILD FAILED ---\nError: %v\n", err)
+				_ = buildLogFile.Sync()
 			}
 
 			// Send error notification
@@ -200,6 +200,7 @@ func warpgateBuildStreaming(s *server.MCPServer, logger *logging.Logger, warpgat
 		// Write success footer to log file
 		if buildLogFile != nil {
 			_, _ = fmt.Fprintf(buildLogFile, "\n--- BUILD COMPLETED SUCCESSFULLY ---\n")
+			_ = buildLogFile.Sync()
 		}
 
 		// Send completion notification
