@@ -14,61 +14,39 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
-func listTemplates(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
+func listTemplates(s *server.MCPServer, logger *logging.Logger, wg *client.WarpgateClient) {
 	tool := mcp.Tool{
 		Name:        "list_templates",
-		Description: "List available warpgate templates from all configured sources",
+		Description: "List available warpgate templates from configured sources. Returns name, description, version, repository, path, tags, and author for each template.",
 		InputSchema: mcp.ToolInputSchema{
 			Type: "object",
 			Properties: map[string]interface{}{
 				"source": map[string]interface{}{
 					"type":        "string",
-					"description": "Filter by source (all, local, git, or specific repo name)",
-					"default":     "all",
+					"description": "Filter by source: 'all' (default), 'local', 'git', or a specific repo name",
 				},
 			},
 		},
 	}
 
 	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		wg, err := client.NewWarpgateClient(warpgatePath)
+		source := argString(request.Params.Arguments, "source", client.SourceAll)
+
+		templates, err := wg.ListTemplates(ctx, source)
 		if err != nil {
-			logger.Errorf("Failed to create Warpgate client: %v", err)
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to create Warpgate client: %v", err)), nil
+			logger.Errorf("list_templates: %v", err)
+			return mcp.NewToolResultError(err.Error()), nil
 		}
 
-		// Parse source parameter
-		source := "all"
-		if request.Params.Arguments != nil {
-			if sourceArg, ok := request.Params.Arguments["source"].(string); ok {
-				source = sourceArg
-			}
-		}
-
-		var templates []client.TemplateInfo
-		if source == "all" {
-			templates, err = wg.ListTemplates()
-		} else {
-			templates, err = wg.ListTemplatesFromSource(source)
-		}
-
-		if err != nil {
-			logger.Errorf("Failed to list templates: %v", err)
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to list templates: %v", err)), nil
-		}
-
-		result := map[string]interface{}{
-			"templates": templates,
-			"count":     len(templates),
+		body, err := json.MarshalIndent(map[string]interface{}{
 			"source":    source,
-		}
-
-		resultJSON, err := json.MarshalIndent(result, "", "  ")
+			"count":     len(templates),
+			"templates": templates,
+		}, "", "  ")
 		if err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to marshal result: %v", err)), nil
+			return mcp.NewToolResultError(fmt.Sprintf("marshal: %v", err)), nil
 		}
-
-		return mcp.NewToolResultText(string(resultJSON)), nil
+		return mcp.NewToolResultText(string(body)), nil
 	}
 
 	s.AddTool(tool, handler)

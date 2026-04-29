@@ -14,16 +14,16 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
-func searchTemplates(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
+func searchTemplates(s *server.MCPServer, logger *logging.Logger, wg *client.WarpgateClient) {
 	tool := mcp.Tool{
 		Name:        "search_templates",
-		Description: "Search for templates with fuzzy matching across all configured sources",
+		Description: "Search warpgate templates by substring across name, description, author, and tags.",
 		InputSchema: mcp.ToolInputSchema{
 			Type: "object",
 			Properties: map[string]interface{}{
 				"query": map[string]interface{}{
 					"type":        "string",
-					"description": "Search query (supports fuzzy matching in name, description, and tags)",
+					"description": "Search term (case-insensitive, matched against name/description/author/tags)",
 				},
 			},
 			Required: []string{"query"},
@@ -31,35 +31,26 @@ func searchTemplates(s *server.MCPServer, logger *logging.Logger, warpgatePath s
 	}
 
 	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		query, ok := request.Params.Arguments["query"].(string)
-		if !ok {
-			return mcp.NewToolResultError("query must be a string"), nil
+		query := argString(request.Params.Arguments, "query", "")
+		if query == "" {
+			return mcp.NewToolResultError("query is required"), nil
 		}
 
-		wg, err := client.NewWarpgateClient(warpgatePath)
+		results, err := wg.SearchTemplates(ctx, query)
 		if err != nil {
-			logger.Errorf("Failed to create Warpgate client: %v", err)
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to create Warpgate client: %v", err)), nil
+			logger.Errorf("search_templates: %v", err)
+			return mcp.NewToolResultError(err.Error()), nil
 		}
 
-		templates, err := wg.SearchTemplates(query)
+		body, err := json.MarshalIndent(map[string]interface{}{
+			"query":   query,
+			"count":   len(results),
+			"results": results,
+		}, "", "  ")
 		if err != nil {
-			logger.Errorf("Failed to search templates: %v", err)
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to search templates: %v", err)), nil
+			return mcp.NewToolResultError(fmt.Sprintf("marshal: %v", err)), nil
 		}
-
-		result := map[string]interface{}{
-			"query":     query,
-			"results":   templates,
-			"count":     len(templates),
-		}
-
-		resultJSON, err := json.MarshalIndent(result, "", "  ")
-		if err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to marshal result: %v", err)), nil
-		}
-
-		return mcp.NewToolResultText(string(resultJSON)), nil
+		return mcp.NewToolResultText(string(body)), nil
 	}
 
 	s.AddTool(tool, handler)

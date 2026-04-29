@@ -5,13 +5,13 @@ package main
 
 import (
 	"context"
-	_ "embed"
 	"fmt"
 	stdlog "log"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/cowdogmoo/warpgate-mcp-server/pkg/client"
 	"github.com/cowdogmoo/warpgate-mcp-server/pkg/logging"
 	"github.com/cowdogmoo/warpgate-mcp-server/pkg/resources"
 	"github.com/cowdogmoo/warpgate-mcp-server/pkg/tools"
@@ -21,28 +21,28 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//go:embed instructions.md
-var instructions string
-
-func runStdioServer(logger *logging.Logger, warpgatePath string) error {
+func runStdioServer(logger *logging.Logger, warpgateBinary string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	mcpServer := NewServer(version.Version, logger, warpgatePath)
+	wg, err := client.New(warpgateBinary)
+	if err != nil {
+		return err
+	}
+
+	mcpServer := NewServer(version.Version, logger, wg)
 	return serverInit(ctx, mcpServer, logger)
 }
 
-func NewServer(ver string, logger *logging.Logger, warpgatePath string) *server.MCPServer {
-	// Create a new MCP server with capabilities
+func NewServer(ver string, logger *logging.Logger, wg *client.WarpgateClient) *server.MCPServer {
 	s := server.NewMCPServer(
 		"warpgate-mcp-server",
 		ver,
 		server.WithResourceCapabilities(true, false),
 	)
 
-	// Register tools and resources
-	tools.RegisterTools(s, logger, warpgatePath)
-	resources.RegisterResources(s, logger, warpgatePath)
+	tools.RegisterTools(s, logger, wg)
+	resources.RegisterResources(s, logger, wg)
 
 	return s
 }
@@ -54,9 +54,9 @@ func runDefaultCommand(cmd *cobra.Command, _ []string) {
 		stdlog.Fatal("Failed to get log file:", err)
 	}
 
-	warpgatePath, err := cmd.PersistentFlags().GetString("warpgate-path")
+	warpgateBinary, err := cmd.PersistentFlags().GetString("warpgate-binary")
 	if err != nil {
-		stdlog.Fatal("Failed to get warpgate path:", err)
+		stdlog.Fatal("Failed to get warpgate binary:", err)
 	}
 
 	logger, err := logging.NewLogger(logFile)
@@ -64,7 +64,7 @@ func runDefaultCommand(cmd *cobra.Command, _ []string) {
 		stdlog.Fatal("Failed to initialize logger:", err)
 	}
 
-	if err := runStdioServer(logger, warpgatePath); err != nil {
+	if err := runStdioServer(logger, warpgateBinary); err != nil {
 		stdlog.Fatal("failed to run stdio server:", err)
 	}
 }
@@ -88,9 +88,9 @@ var (
 				stdlog.Fatal("Failed to get log file:", err)
 			}
 
-			warpgatePath, err := rootCmd.PersistentFlags().GetString("warpgate-path")
+			warpgateBinary, err := rootCmd.PersistentFlags().GetString("warpgate-binary")
 			if err != nil {
-				stdlog.Fatal("Failed to get warpgate path:", err)
+				stdlog.Fatal("Failed to get warpgate binary:", err)
 			}
 
 			logger, err := logging.NewLogger(logFile)
@@ -98,7 +98,7 @@ var (
 				stdlog.Fatal("Failed to initialize logger:", err)
 			}
 
-			if err := runStdioServer(logger, warpgatePath); err != nil {
+			if err := runStdioServer(logger, warpgateBinary); err != nil {
 				stdlog.Fatal("failed to run stdio server:", err)
 			}
 		},
@@ -108,7 +108,7 @@ var (
 func init() {
 	rootCmd.SetVersionTemplate("{{.Short}}\n{{.Version}}\n")
 	rootCmd.PersistentFlags().String("log-file", "", "Path to log file")
-	rootCmd.PersistentFlags().String("warpgate-path", "", "Path to warpgate repository (default: auto-detect)")
+	rootCmd.PersistentFlags().String("warpgate-binary", "", "Path to warpgate CLI binary (default: 'warpgate' on PATH)")
 
 	rootCmd.AddCommand(stdioCmd)
 }

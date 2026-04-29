@@ -5,7 +5,6 @@ package tools
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/cowdogmoo/warpgate-mcp-server/pkg/client"
 	"github.com/cowdogmoo/warpgate-mcp-server/pkg/logging"
@@ -13,20 +12,20 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
-func validateTemplate(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
+func validateTemplate(s *server.MCPServer, logger *logging.Logger, wg *client.WarpgateClient) {
 	tool := mcp.Tool{
 		Name:        "validate_template",
-		Description: "Validate a warpgate template configuration",
+		Description: "Validate a warpgate template configuration. Full validation checks file existence; --syntax-only skips file checks.",
 		InputSchema: mcp.ToolInputSchema{
 			Type: "object",
 			Properties: map[string]interface{}{
 				"config": map[string]interface{}{
 					"type":        "string",
-					"description": "Path to warpgate.yaml or template name",
+					"description": "Path to a warpgate.yaml or a template name",
 				},
 				"syntax_only": map[string]interface{}{
 					"type":        "boolean",
-					"description": "Only validate syntax, skip file checks",
+					"description": "Validate structure/syntax only, skip file existence checks",
 					"default":     false,
 				},
 			},
@@ -35,29 +34,18 @@ func validateTemplate(s *server.MCPServer, logger *logging.Logger, warpgatePath 
 	}
 
 	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		config, ok := request.Params.Arguments["config"].(string)
-		if !ok {
-			return mcp.NewToolResultError("config must be a string"), nil
+		config := argString(request.Params.Arguments, "config", "")
+		if config == "" {
+			return mcp.NewToolResultError("config is required"), nil
 		}
+		syntaxOnly := argBool(request.Params.Arguments, "syntax_only", false)
 
-		syntaxOnly := false
-		if so, ok := request.Params.Arguments["syntax_only"].(bool); ok {
-			syntaxOnly = so
-		}
-
-		wg, err := client.NewWarpgateClient(warpgatePath)
+		out, err := wg.ValidateTemplate(ctx, config, syntaxOnly)
 		if err != nil {
-			logger.Errorf("Failed to create Warpgate client: %v", err)
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to create Warpgate client: %v", err)), nil
+			logger.Errorf("validate_template: %v", err)
+			return mcp.NewToolResultError(err.Error()), nil
 		}
-
-		output, err := wg.ValidateTemplate(config, syntaxOnly)
-		if err != nil {
-			logger.Errorf("Failed to validate template: %v", err)
-			return mcp.NewToolResultError(fmt.Sprintf("Validation failed: %v\n%s", err, output)), nil
-		}
-
-		return mcp.NewToolResultText(fmt.Sprintf("Template validation successful:\n%s", output)), nil
+		return mcp.NewToolResultText(out), nil
 	}
 
 	s.AddTool(tool, handler)

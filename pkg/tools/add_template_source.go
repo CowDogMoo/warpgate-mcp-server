@@ -5,7 +5,6 @@ package tools
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/cowdogmoo/warpgate-mcp-server/pkg/client"
 	"github.com/cowdogmoo/warpgate-mcp-server/pkg/logging"
@@ -13,20 +12,20 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
-func addTemplateSource(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
+func addTemplateSource(s *server.MCPServer, logger *logging.Logger, wg *client.WarpgateClient) {
 	tool := mcp.Tool{
 		Name:        "add_template_source",
-		Description: "Add a template source (git repository or local path) to warpgate configuration",
+		Description: "Register a new template source. Accepts a git URL or a local directory path. For git URLs, an optional 'name' overrides the auto-derived name; ignored for local paths.",
 		InputSchema: mcp.ToolInputSchema{
 			Type: "object",
 			Properties: map[string]interface{}{
 				"url_or_path": map[string]interface{}{
 					"type":        "string",
-					"description": "Git URL (e.g., https://github.com/user/templates.git) or local directory path",
+					"description": "Git URL (https://github.com/user/templates.git) or local directory path",
 				},
 				"name": map[string]interface{}{
 					"type":        "string",
-					"description": "Custom name for git repository (optional, only used for git URLs)",
+					"description": "Optional custom name for git repos",
 				},
 			},
 			Required: []string{"url_or_path"},
@@ -34,30 +33,18 @@ func addTemplateSource(s *server.MCPServer, logger *logging.Logger, warpgatePath
 	}
 
 	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		urlOrPath, ok := request.Params.Arguments["url_or_path"].(string)
-		if !ok {
-			return mcp.NewToolResultError("url_or_path must be a string"), nil
+		urlOrPath := argString(request.Params.Arguments, "url_or_path", "")
+		if urlOrPath == "" {
+			return mcp.NewToolResultError("url_or_path is required"), nil
 		}
+		name := argString(request.Params.Arguments, "name", "")
 
-		name := ""
-		if n, ok := request.Params.Arguments["name"].(string); ok {
-			name = n
-		}
-
-		wg, err := client.NewWarpgateClient(warpgatePath)
+		out, err := wg.AddTemplateSource(ctx, urlOrPath, name)
 		if err != nil {
-			logger.Errorf("Failed to create Warpgate client: %v", err)
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to create Warpgate client: %v", err)), nil
+			logger.Errorf("add_template_source: %v", err)
+			return mcp.NewToolResultError(err.Error()), nil
 		}
-
-		output, err := wg.AddTemplateSource(urlOrPath, name)
-		if err != nil {
-			logger.Errorf("Failed to add template source: %v", err)
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to add template source: %v\n%s", err, output)), nil
-		}
-
-		logger.Infof("Template source added successfully: %s", urlOrPath)
-		return mcp.NewToolResultText(fmt.Sprintf("Template source added successfully:\n%s", output)), nil
+		return mcp.NewToolResultText(out), nil
 	}
 
 	s.AddTool(tool, handler)

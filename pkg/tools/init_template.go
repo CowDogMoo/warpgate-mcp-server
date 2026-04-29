@@ -5,7 +5,6 @@ package tools
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/cowdogmoo/warpgate-mcp-server/pkg/client"
 	"github.com/cowdogmoo/warpgate-mcp-server/pkg/logging"
@@ -13,61 +12,44 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
-func initTemplate(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
+func initTemplate(s *server.MCPServer, logger *logging.Logger, wg *client.WarpgateClient) {
 	tool := mcp.Tool{
 		Name:        "init_template",
-		Description: "Initialize a new warpgate template with scaffolding",
+		Description: "Scaffold a new warpgate template directory containing warpgate.yaml, README.md, and a scripts/ folder.",
 		InputSchema: mcp.ToolInputSchema{
-			Type:     "object",
-			Required: []string{"name"},
+			Type: "object",
 			Properties: map[string]interface{}{
 				"name": map[string]interface{}{
 					"type":        "string",
-					"description": "Template name (e.g., 'my-awesome-template')",
+					"description": "Template name (becomes the directory name)",
 				},
 				"from_template": map[string]interface{}{
 					"type":        "string",
-					"description": "Fork from existing template (optional)",
+					"description": "Optional: fork from an existing template by name",
 				},
 				"output_dir": map[string]interface{}{
 					"type":        "string",
-					"description": "Output directory (default: current directory)",
+					"description": "Output directory (default: current working directory)",
 				},
 			},
+			Required: []string{"name"},
 		},
 	}
 
 	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		// Parse arguments
-		name, ok := request.Params.Arguments["name"].(string)
-		if !ok || name == "" {
+		name := argString(request.Params.Arguments, "name", "")
+		if name == "" {
 			return mcp.NewToolResultError("name is required"), nil
 		}
+		from := argString(request.Params.Arguments, "from_template", "")
+		out := argString(request.Params.Arguments, "output_dir", "")
 
-		fromTemplate := ""
-		if ft, ok := request.Params.Arguments["from_template"].(string); ok {
-			fromTemplate = ft
-		}
-
-		outputDir := ""
-		if od, ok := request.Params.Arguments["output_dir"].(string); ok {
-			outputDir = od
-		}
-
-		wg, err := client.NewWarpgateClient(warpgatePath)
+		output, err := wg.InitTemplate(ctx, name, from, out)
 		if err != nil {
-			logger.Errorf("Failed to create Warpgate client: %v", err)
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to create Warpgate client: %v", err)), nil
+			logger.Errorf("init_template: %v", err)
+			return mcp.NewToolResultError(err.Error()), nil
 		}
-
-		output, err := wg.InitTemplate(name, fromTemplate, outputDir)
-		if err != nil {
-			logger.Errorf("Failed to initialize template: %v", err)
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to initialize template: %v\n%s", err, output)), nil
-		}
-
-		logger.Infof("Template %s initialized successfully", name)
-		return mcp.NewToolResultText(fmt.Sprintf("Template initialized successfully:\n%s", output)), nil
+		return mcp.NewToolResultText(output), nil
 	}
 
 	s.AddTool(tool, handler)

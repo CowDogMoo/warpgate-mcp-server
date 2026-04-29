@@ -40,22 +40,32 @@ claude mcp add warpgate -s user -t stdio -- /path/to/warpgate-mcp-server stdio
 
 ## Tools
 
-### Template Management
-- `list_templates` - List templates from all sources
-- `get_template_info` - Get template details
-- `init_template` - Create new template
-- `validate_template` - Validate warpgate.yaml
-- `build_template` - Build container/AMI
+### Templates
+- `list_templates` — list templates from configured sources
+- `search_templates` — substring search by name/description/author/tags
+- `get_template_info` — show details for a template
+- `init_template` — scaffold a new template
+- `validate_template` — validate a warpgate.yaml
+- `add_template_source` — register a git repo or local path
+- `remove_template_source` — unregister a source
+- `update_template_cache` — pull latest from configured git sources
 
-### Discovery & Sources
-- `search_templates` - Fuzzy search templates
-- `add_template_source` - Add git repo or local path
-- `remove_template_source` - Remove source
-- `update_template_cache` - Refresh cache
+### Build
+- `build_template` — build container or AMI (full flag surface: archs, push, push-digest, regions, copy-to-regions, build-args, labels, cache-from/to, output-manifest, dry-run, etc.)
+- `convert_packer_template` — migrate a Packer HCL template to warpgate.yaml
 
-### Advanced
-- `convert_packer_template` - Migrate from Packer
-- `create_manifest` - Multi-arch manifests
+### Manifests (multi-arch)
+- `create_manifest` — assemble and push a multi-arch manifest from per-arch digest files
+- `inspect_manifest` — inspect a multi-arch manifest in a registry
+- `list_manifests` — list manifest tags for an image
+
+### AWS
+- `cleanup_aws_resources` — clean up AWS Image Builder resources (use `dry_run` first)
+
+### Configuration
+- `show_config` — show resolved warpgate configuration
+- `get_config` — read a config value by dotted key
+- `set_config` — write a config value to `~/.config/warpgate/config.yaml`
 
 ## Resources
 

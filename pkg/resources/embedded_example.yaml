@@ -1,0 +1,37 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/cowdogmoo/warpgate/main/schema/warpgate-template.json
+
+metadata:
+  name: example-template
+  version: 1.0.0
+  description: Minimal warpgate template
+  author: Your Name <you@example.com>
+  license: MIT
+  tags:
+    - example
+  requires:
+    warpgate: '>=1.0.0'
+
+name: example
+version: latest
+
+base:
+  image: ubuntu:22.04
+  env:
+    DEBIAN_FRONTEND: noninteractive
+
+provisioners:
+  - type: shell
+    inline:
+      - apt-get update
+      - apt-get install -y curl
+
+targets:
+  - type: container
+    registry: ghcr.io/your-org
+    tags:
+      - latest
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    push: false

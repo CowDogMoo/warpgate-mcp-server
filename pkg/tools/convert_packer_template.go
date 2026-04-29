@@ -5,7 +5,6 @@ package tools
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/cowdogmoo/warpgate-mcp-server/pkg/client"
 	"github.com/cowdogmoo/warpgate-mcp-server/pkg/logging"
@@ -13,28 +12,36 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
-func convertPackerTemplate(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
+func convertPackerTemplate(s *server.MCPServer, logger *logging.Logger, wg *client.WarpgateClient) {
 	tool := mcp.Tool{
 		Name:        "convert_packer_template",
-		Description: "Convert a Packer template to warpgate.yaml format for migration",
+		Description: "Convert an existing Packer HCL template to a warpgate.yaml. Use 'dry_run' to preview without writing.",
 		InputSchema: mcp.ToolInputSchema{
 			Type: "object",
 			Properties: map[string]interface{}{
 				"template_dir": map[string]interface{}{
 					"type":        "string",
-					"description": "Directory containing Packer template files",
+					"description": "Directory containing Packer .pkr.hcl files (variables, docker, ami)",
 				},
 				"output": map[string]interface{}{
 					"type":        "string",
-					"description": "Output file path (default: warpgate.yaml)",
+					"description": "Output file path (default: <template_dir>/warpgate.yaml)",
 				},
 				"author": map[string]interface{}{
 					"type":        "string",
-					"description": "Template author name",
+					"description": "Template author",
 				},
 				"version": map[string]interface{}{
 					"type":        "string",
-					"description": "Template version (default: 1.0.0)",
+					"description": "Template version (default from config)",
+				},
+				"base_image": map[string]interface{}{
+					"type":        "string",
+					"description": "Override base image (default: extracted from template)",
+				},
+				"license": map[string]interface{}{
+					"type":        "string",
+					"description": "Template license (default from config)",
 				},
 				"include_ami": map[string]interface{}{
 					"type":        "boolean",
@@ -43,8 +50,7 @@ func convertPackerTemplate(s *server.MCPServer, logger *logging.Logger, warpgate
 				},
 				"dry_run": map[string]interface{}{
 					"type":        "boolean",
-					"description": "Preview conversion without writing files",
-					"default":     false,
+					"description": "Print converted YAML without writing",
 				},
 			},
 			Required: []string{"template_dir"},
@@ -52,50 +58,29 @@ func convertPackerTemplate(s *server.MCPServer, logger *logging.Logger, warpgate
 	}
 
 	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		templateDir, ok := request.Params.Arguments["template_dir"].(string)
-		if !ok {
-			return mcp.NewToolResultError("template_dir must be a string"), nil
-		}
-
-		wg, err := client.NewWarpgateClient(warpgatePath)
-		if err != nil {
-			logger.Errorf("Failed to create Warpgate client: %v", err)
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to create Warpgate client: %v", err)), nil
+		args := request.Params.Arguments
+		dir := argString(args, "template_dir", "")
+		if dir == "" {
+			return mcp.NewToolResultError("template_dir is required"), nil
 		}
 
 		opts := client.ConvertOptions{
-			TemplateDir: templateDir,
-			IncludeAMI:  true, // default
+			TemplateDir: dir,
+			Output:      argString(args, "output", ""),
+			Author:      argString(args, "author", ""),
+			Version:     argString(args, "version", ""),
+			BaseImage:   argString(args, "base_image", ""),
+			License:     argString(args, "license", ""),
+			IncludeAMI:  argBoolPtr(args, "include_ami"),
+			DryRun:      argBool(args, "dry_run", false),
 		}
 
-		if output, ok := request.Params.Arguments["output"].(string); ok {
-			opts.Output = output
-		}
-
-		if author, ok := request.Params.Arguments["author"].(string); ok {
-			opts.Author = author
-		}
-
-		if version, ok := request.Params.Arguments["version"].(string); ok {
-			opts.Version = version
-		}
-
-		if includeAMI, ok := request.Params.Arguments["include_ami"].(bool); ok {
-			opts.IncludeAMI = includeAMI
-		}
-
-		if dryRun, ok := request.Params.Arguments["dry_run"].(bool); ok {
-			opts.DryRun = dryRun
-		}
-
-		output, err := wg.ConvertPackerTemplate(opts)
+		out, err := wg.ConvertPackerTemplate(ctx, opts)
 		if err != nil {
-			logger.Errorf("Failed to convert Packer template: %v", err)
-			return mcp.NewToolResultError(fmt.Sprintf("Conversion failed: %v\n%s", err, output)), nil
+			logger.Errorf("convert_packer_template: %v", err)
+			return mcp.NewToolResultError(err.Error()), nil
 		}
-
-		logger.Infof("Packer template converted successfully")
-		return mcp.NewToolResultText(fmt.Sprintf("Conversion successful:\n%s", output)), nil
+		return mcp.NewToolResultText(out), nil
 	}
 
 	s.AddTool(tool, handler)

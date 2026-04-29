@@ -5,7 +5,6 @@ package tools
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/cowdogmoo/warpgate-mcp-server/pkg/client"
 	"github.com/cowdogmoo/warpgate-mcp-server/pkg/logging"
@@ -13,10 +12,10 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
-func updateTemplateCache(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
+func updateTemplateCache(s *server.MCPServer, logger *logging.Logger, wg *client.WarpgateClient) {
 	tool := mcp.Tool{
 		Name:        "update_template_cache",
-		Description: "Update the local cache of templates from all configured git repositories",
+		Description: "Pull the latest templates from all configured git repositories.",
 		InputSchema: mcp.ToolInputSchema{
 			Type:       "object",
 			Properties: map[string]interface{}{},
@@ -24,20 +23,12 @@ func updateTemplateCache(s *server.MCPServer, logger *logging.Logger, warpgatePa
 	}
 
 	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		wg, err := client.NewWarpgateClient(warpgatePath)
+		out, err := wg.UpdateTemplateCache(ctx)
 		if err != nil {
-			logger.Errorf("Failed to create Warpgate client: %v", err)
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to create Warpgate client: %v", err)), nil
+			logger.Errorf("update_template_cache: %v", err)
+			return mcp.NewToolResultError(err.Error()), nil
 		}
-
-		output, err := wg.UpdateTemplateCache()
-		if err != nil {
-			logger.Errorf("Failed to update template cache: %v", err)
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to update template cache: %v\n%s", err, output)), nil
-		}
-
-		logger.Infof("Template cache updated successfully")
-		return mcp.NewToolResultText(fmt.Sprintf("Template cache updated successfully:\n%s", output)), nil
+		return mcp.NewToolResultText(out), nil
 	}
 
 	s.AddTool(tool, handler)

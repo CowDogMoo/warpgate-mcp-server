@@ -5,8 +5,9 @@ package resources
 
 import (
 	"context"
-	"encoding/json"
+	_ "embed"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -17,157 +18,111 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
-// RegisterResources registers all available resources with the MCP server
-func RegisterResources(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
-	warpgateConfigResource(s, logger, warpgatePath)
-	templateSchemaResource(s, logger, warpgatePath)
-	exampleTemplateResource(s, logger, warpgatePath)
+const (
+	configResourceURI   = "warpgate://config"
+	schemaResourceURI   = "warpgate://schema/template"
+	exampleResourceURI  = "warpgate://examples/template"
+	templateSchemaURL   = "https://raw.githubusercontent.com/cowdogmoo/warpgate/main/schema/warpgate-template.json"
+)
+
+//go:embed embedded_example.yaml
+var embeddedExample string
+
+// RegisterResources wires resources to the MCP server.
+func RegisterResources(s *server.MCPServer, logger *logging.Logger, wg *client.WarpgateClient) {
+	configResource(s, logger, wg)
+	schemaResource(s, logger)
+	exampleResource(s, logger)
 }
 
-// warpgateConfigResource exposes the warpgate configuration
-func warpgateConfigResource(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
+// configResource exposes the resolved warpgate configuration.
+// Uses `warpgate config show` so callers see the same view warpgate uses
+// (defaults + file + env + flags), not a hand-parsed yaml file.
+func configResource(s *server.MCPServer, logger *logging.Logger, wg *client.WarpgateClient) {
 	resource := mcp.Resource{
-		URI:         "warpgate://config",
+		URI:         configResourceURI,
 		Name:        "Warpgate Configuration",
-		Description: "Global warpgate configuration from ~/.config/warpgate/config.yaml",
+		Description: "Resolved warpgate configuration (defaults + config file + env + flags)",
 		MIMEType:    "application/yaml",
 	}
 
 	handler := func(ctx context.Context, request mcp.ReadResourceRequest) ([]interface{}, error) {
-		wg, err := client.NewWarpgateClient(warpgatePath)
+		out, err := wg.ConfigShow(ctx)
 		if err != nil {
-			logger.Errorf("Failed to create Warpgate client: %v", err)
-			return nil, fmt.Errorf("failed to create Warpgate client: %w", err)
+			logger.Errorf("read config resource: %v", err)
+			return nil, fmt.Errorf("read warpgate config: %w", err)
 		}
-
-		config, err := wg.GetWarpgateConfig()
-		if err != nil {
-			logger.Errorf("Failed to get warpgate config: %v", err)
-			return nil, fmt.Errorf("failed to get warpgate config: %w", err)
-		}
-
-		// Convert config to JSON for better readability
-		configJSON, err := json.MarshalIndent(config, "", "  ")
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal config: %w", err)
-		}
-
 		return []interface{}{
-			mcp.TextContent{
-				Type: "text",
-				Text: string(configJSON),
+			mcp.TextResourceContents{
+				ResourceContents: mcp.ResourceContents{URI: configResourceURI, MIMEType: "application/yaml"},
+				Text:             out,
 			},
 		}, nil
 	}
-
 	s.AddResource(resource, handler)
 }
 
-// templateSchemaResource exposes the warpgate template JSON schema
-func templateSchemaResource(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
+// schemaResource fetches the warpgate.yaml JSON schema from upstream.
+func schemaResource(s *server.MCPServer, logger *logging.Logger) {
 	resource := mcp.Resource{
-		URI:         "warpgate://schema/template",
+		URI:         schemaResourceURI,
 		Name:        "Warpgate Template Schema",
 		Description: "JSON schema for warpgate.yaml template files",
 		MIMEType:    "application/json",
 	}
 
 	handler := func(ctx context.Context, request mcp.ReadResourceRequest) ([]interface{}, error) {
-		// Fetch the schema from the warpgate repository
-		schemaURL := "https://raw.githubusercontent.com/cowdogmoo/warpgate/main/schema/warpgate-template.json"
-
-		resp, err := http.Get(schemaURL)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, templateSchemaURL, nil)
 		if err != nil {
-			logger.Errorf("Failed to fetch schema: %v", err)
-			return nil, fmt.Errorf("failed to fetch schema: %w", err)
+			return nil, fmt.Errorf("build schema request: %w", err)
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			logger.Errorf("fetch schema: %v", err)
+			return nil, fmt.Errorf("fetch schema: %w", err)
 		}
 		defer resp.Body.Close()
-
 		if resp.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("failed to fetch schema: HTTP %d", resp.StatusCode)
+			return nil, fmt.Errorf("fetch schema: HTTP %d", resp.StatusCode)
 		}
-
-		var schema interface{}
-		if err := json.NewDecoder(resp.Body).Decode(&schema); err != nil {
-			return nil, fmt.Errorf("failed to decode schema: %w", err)
-		}
-
-		schemaJSON, err := json.MarshalIndent(schema, "", "  ")
+		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return nil, fmt.Errorf("failed to marshal schema: %w", err)
+			return nil, fmt.Errorf("read schema body: %w", err)
 		}
-
 		return []interface{}{
-			mcp.TextContent{
-				Type: "text",
-				Text: string(schemaJSON),
+			mcp.TextResourceContents{
+				ResourceContents: mcp.ResourceContents{URI: schemaResourceURI, MIMEType: "application/json"},
+				Text:             string(body),
 			},
 		}, nil
 	}
-
 	s.AddResource(resource, handler)
 }
 
-// exampleTemplateResource exposes the example warpgate.yaml
-func exampleTemplateResource(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
+// exampleResource serves an example warpgate.yaml. Prefers the on-disk example
+// in the repo, falls back to an embedded copy so the resource is always available.
+func exampleResource(s *server.MCPServer, logger *logging.Logger) {
 	resource := mcp.Resource{
-		URI:         "warpgate://examples/template",
+		URI:         exampleResourceURI,
 		Name:        "Example Warpgate Template",
-		Description: "Example warpgate.yaml demonstrating the template format",
+		Description: "An example warpgate.yaml demonstrating the template format",
 		MIMEType:    "application/yaml",
 	}
 
 	handler := func(ctx context.Context, request mcp.ReadResourceRequest) ([]interface{}, error) {
-		// Try to read the example file from the MCP server repository
-		examplePath := filepath.Join(warpgatePath, "..", "warpgate-mcp-server", "examples", "warpgate.yaml")
-
-		// If that doesn't exist, try relative to current directory
-		if _, err := os.Stat(examplePath); os.IsNotExist(err) {
-			examplePath = "examples/warpgate.yaml"
+		text := embeddedExample
+		if cwd, err := os.Getwd(); err == nil {
+			candidate := filepath.Join(cwd, "examples", "warpgate.yaml")
+			if data, err := os.ReadFile(candidate); err == nil {
+				text = string(data)
+			}
 		}
-
-		content, err := os.ReadFile(examplePath)
-		if err != nil {
-			logger.Warnf("Failed to read example template: %v", err)
-			// Return a minimal example if file doesn't exist
-			content = []byte(`---
-# Example warpgate template
-metadata:
-  name: example-template
-  version: 1.0.0
-  description: Example warpgate template
-
-name: example-app
-version: latest
-
-base:
-  image: ubuntu:22.04
-
-provisioners:
-  - type: shell
-    inline:
-      - apt-get update
-      - apt-get install -y curl
-
-targets:
-  - type: container
-    registry: ghcr.io/myorg
-    tags:
-      - latest
-    platforms:
-      - linux/amd64
-      - linux/arm64
-    push: false
-`)
-		}
-
 		return []interface{}{
-			mcp.TextContent{
-				Type: "text",
-				Text: string(content),
+			mcp.TextResourceContents{
+				ResourceContents: mcp.ResourceContents{URI: exampleResourceURI, MIMEType: "application/yaml"},
+				Text:             text,
 			},
 		}, nil
 	}
-
 	s.AddResource(resource, handler)
 }
