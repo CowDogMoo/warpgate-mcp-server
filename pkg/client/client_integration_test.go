@@ -6,6 +6,7 @@
 package client
 
 import (
+	"context"
 	"os"
 	"testing"
 )
@@ -44,7 +45,7 @@ func TestWarpgateTemplatesListIntegration(t *testing.T) {
 		t.Skip("Skipping: warpgate CLI not installed")
 	}
 
-	output, err := client.WarpgateTemplatesList("", "json")
+	output, err := client.WarpgateTemplatesList(context.Background(), "", "json")
 	if err != nil {
 		t.Logf("Templates list returned error (may be expected): %v", err)
 		return
@@ -58,7 +59,7 @@ func TestWarpgateConfigShowIntegration(t *testing.T) {
 		t.Skip("Skipping: warpgate CLI not installed")
 	}
 
-	output, err := client.WarpgateConfigShow()
+	output, err := client.WarpgateConfigShow(context.Background())
 	if err != nil {
 		t.Logf("Config show returned error (may be expected): %v", err)
 		return

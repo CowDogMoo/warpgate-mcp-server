@@ -37,7 +37,7 @@ func warpgateInit(s *server.MCPServer, logger *logging.Logger, warpgatePath stri
 		},
 	}
 
-	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		name := request.GetString("name", "")
 		if name == "" {
 			return mcp.NewToolResultError("name is required and must be a string"), nil
@@ -58,7 +58,7 @@ func warpgateInit(s *server.MCPServer, logger *logging.Logger, warpgatePath stri
 			FromTemplate: request.GetString("from", ""),
 		}
 
-		output, err := wg.WarpgateInit(name, opts)
+		output, err := wg.WarpgateInit(ctx, name, opts)
 		if err != nil {
 			logger.Errorf("Init failed: %v", err)
 			return mcp.NewToolResultError(fmt.Sprintf("Init failed: %v\n%s", err, output)), nil

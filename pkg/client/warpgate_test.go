@@ -4,6 +4,7 @@
 package client
 
 import (
+	"context"
 	"os"
 	"testing"
 )
@@ -170,7 +171,7 @@ func TestExecuteCLINotAvailable(t *testing.T) {
 		cliDetected: false,
 	}
 
-	_, err := client.ExecuteCLI("version")
+	_, err := client.ExecuteCLI(context.Background(), "version")
 	if err == nil {
 		t.Error("ExecuteCLI should fail when CLI is not available")
 	}
@@ -181,7 +182,7 @@ func TestExecuteCLIWithWorkdirNotAvailable(t *testing.T) {
 		cliDetected: false,
 	}
 
-	_, err := client.ExecuteCLIWithWorkdir("/tmp", "version")
+	_, err := client.ExecuteCLIWithWorkdir(context.Background(), "/tmp", "version")
 	if err == nil {
 		t.Error("ExecuteCLIWithWorkdir should fail when CLI is not available")
 	}
@@ -206,7 +207,7 @@ func TestWarpgateBuildArgsConstruction(t *testing.T) {
 		DigestDir:     "/tmp/digests",
 	}
 
-	_, err := client.WarpgateBuild("test-template", opts)
+	_, err := client.WarpgateBuild(context.Background(), "test-template", opts)
 	if err == nil {
 		t.Error("WarpgateBuild should fail when CLI is not available")
 	}
@@ -217,7 +218,7 @@ func TestWarpgateValidateNotAvailable(t *testing.T) {
 		cliDetected: false,
 	}
 
-	_, err := client.WarpgateValidate("/path/to/config", true)
+	_, err := client.WarpgateValidate(context.Background(), "/path/to/config", true)
 	if err == nil {
 		t.Error("WarpgateValidate should fail when CLI is not available")
 	}
@@ -233,7 +234,7 @@ func TestWarpgateInitNotAvailable(t *testing.T) {
 		FromTemplate: "base",
 	}
 
-	_, err := client.WarpgateInit("test", opts)
+	_, err := client.WarpgateInit(context.Background(), "test", opts)
 	if err == nil {
 		t.Error("WarpgateInit should fail when CLI is not available")
 	}
@@ -244,7 +245,7 @@ func TestWarpgateTemplatesListNotAvailable(t *testing.T) {
 		cliDetected: false,
 	}
 
-	_, err := client.WarpgateTemplatesList("local", "json")
+	_, err := client.WarpgateTemplatesList(context.Background(), "local", "json")
 	if err == nil {
 		t.Error("WarpgateTemplatesList should fail when CLI is not available")
 	}
@@ -255,7 +256,7 @@ func TestWarpgateTemplatesInfoNotAvailable(t *testing.T) {
 		cliDetected: false,
 	}
 
-	_, err := client.WarpgateTemplatesInfo("test-template")
+	_, err := client.WarpgateTemplatesInfo(context.Background(), "test-template")
 	if err == nil {
 		t.Error("WarpgateTemplatesInfo should fail when CLI is not available")
 	}
@@ -266,7 +267,7 @@ func TestWarpgateTemplatesAddNotAvailable(t *testing.T) {
 		cliDetected: false,
 	}
 
-	_, err := client.WarpgateTemplatesAdd("https://example.com/template", "my-template")
+	_, err := client.WarpgateTemplatesAdd(context.Background(), "https://example.com/template", "my-template")
 	if err == nil {
 		t.Error("WarpgateTemplatesAdd should fail when CLI is not available")
 	}
@@ -277,7 +278,7 @@ func TestWarpgateTemplatesRemoveNotAvailable(t *testing.T) {
 		cliDetected: false,
 	}
 
-	_, err := client.WarpgateTemplatesRemove("my-template")
+	_, err := client.WarpgateTemplatesRemove(context.Background(), "my-template")
 	if err == nil {
 		t.Error("WarpgateTemplatesRemove should fail when CLI is not available")
 	}
@@ -288,7 +289,7 @@ func TestWarpgateManifestsCreateNotAvailable(t *testing.T) {
 		cliDetected: false,
 	}
 
-	_, err := client.WarpgateManifestsCreate("test-manifest", []string{"img1", "img2"}, true)
+	_, err := client.WarpgateManifestsCreate(context.Background(), "test-manifest", []string{"img1", "img2"}, true)
 	if err == nil {
 		t.Error("WarpgateManifestsCreate should fail when CLI is not available")
 	}
@@ -299,7 +300,7 @@ func TestWarpgateManifestsPushNotAvailable(t *testing.T) {
 		cliDetected: false,
 	}
 
-	_, err := client.WarpgateManifestsPush("test-manifest", true)
+	_, err := client.WarpgateManifestsPush(context.Background(), "test-manifest", true)
 	if err == nil {
 		t.Error("WarpgateManifestsPush should fail when CLI is not available")
 	}
@@ -310,7 +311,7 @@ func TestWarpgateConfigGetNotAvailable(t *testing.T) {
 		cliDetected: false,
 	}
 
-	_, err := client.WarpgateConfigGet("registry")
+	_, err := client.WarpgateConfigGet(context.Background(), "registry")
 	if err == nil {
 		t.Error("WarpgateConfigGet should fail when CLI is not available")
 	}
@@ -321,7 +322,7 @@ func TestWarpgateConfigSetNotAvailable(t *testing.T) {
 		cliDetected: false,
 	}
 
-	_, err := client.WarpgateConfigSet("registry", "ghcr.io/test")
+	_, err := client.WarpgateConfigSet(context.Background(), "registry", "ghcr.io/test")
 	if err == nil {
 		t.Error("WarpgateConfigSet should fail when CLI is not available")
 	}
@@ -332,7 +333,7 @@ func TestWarpgateConfigShowNotAvailable(t *testing.T) {
 		cliDetected: false,
 	}
 
-	_, err := client.WarpgateConfigShow()
+	_, err := client.WarpgateConfigShow(context.Background())
 	if err == nil {
 		t.Error("WarpgateConfigShow should fail when CLI is not available")
 	}
@@ -343,7 +344,7 @@ func TestWarpgateConvertNotAvailable(t *testing.T) {
 		cliDetected: false,
 	}
 
-	_, err := client.WarpgateConvert("/path/to/source", "/path/to/output")
+	_, err := client.WarpgateConvert(context.Background(), "/path/to/source", "/path/to/output")
 	if err == nil {
 		t.Error("WarpgateConvert should fail when CLI is not available")
 	}

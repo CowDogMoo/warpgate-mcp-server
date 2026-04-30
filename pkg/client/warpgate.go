@@ -5,6 +5,7 @@ package client
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -216,12 +217,12 @@ func (w *WarpgateClient) GetRepoPath() string {
 }
 
 // ExecuteCLI runs a warpgate CLI command with the given arguments
-func (w *WarpgateClient) ExecuteCLI(args ...string) (string, error) {
+func (w *WarpgateClient) ExecuteCLI(ctx context.Context, args ...string) (string, error) {
 	if !w.cliDetected {
 		return "", fmt.Errorf("warpgate CLI is not available")
 	}
 
-	cmd := exec.Command(w.binaryPath, args...) //nolint:gosec // G204: warpgate CLI execution with validated binary
+	cmd := exec.CommandContext(ctx, w.binaryPath, args...) //nolint:gosec // G204: warpgate CLI execution with validated binary
 	if w.repoPath != "" {
 		cmd.Dir = w.repoPath
 	}
@@ -235,12 +236,12 @@ func (w *WarpgateClient) ExecuteCLI(args ...string) (string, error) {
 }
 
 // ExecuteCLIWithWorkdir runs a warpgate CLI command with explicit working directory
-func (w *WarpgateClient) ExecuteCLIWithWorkdir(workdir string, args ...string) (string, error) {
+func (w *WarpgateClient) ExecuteCLIWithWorkdir(ctx context.Context, workdir string, args ...string) (string, error) {
 	if !w.cliDetected {
 		return "", fmt.Errorf("warpgate CLI is not available")
 	}
 
-	cmd := exec.Command(w.binaryPath, args...) //nolint:gosec // G204: warpgate CLI execution with validated binary
+	cmd := exec.CommandContext(ctx, w.binaryPath, args...) //nolint:gosec // G204: warpgate CLI execution with validated binary
 	if workdir != "" {
 		cmd.Dir = workdir
 	}
@@ -254,7 +255,7 @@ func (w *WarpgateClient) ExecuteCLIWithWorkdir(workdir string, args ...string) (
 }
 
 // WarpgateBuild executes the warpgate build command
-func (w *WarpgateClient) WarpgateBuild(template string, opts BuildOptions) (string, error) {
+func (w *WarpgateClient) WarpgateBuild(ctx context.Context, template string, opts BuildOptions) (string, error) {
 	args := []string{"build"}
 
 	if opts.Template != "" {
@@ -298,7 +299,7 @@ func (w *WarpgateClient) WarpgateBuild(template string, opts BuildOptions) (stri
 		}
 	}
 
-	return w.ExecuteCLI(args...)
+	return w.ExecuteCLI(ctx, args...)
 }
 
 // BuildOptions contains options for the warpgate build command
@@ -316,7 +317,7 @@ type BuildOptions struct {
 }
 
 // WarpgateValidate executes the warpgate validate command
-func (w *WarpgateClient) WarpgateValidate(configPath string, syntaxOnly bool) (string, error) {
+func (w *WarpgateClient) WarpgateValidate(ctx context.Context, configPath string, syntaxOnly bool) (string, error) {
 	args := []string{"validate"}
 
 	if configPath != "" {
@@ -327,11 +328,11 @@ func (w *WarpgateClient) WarpgateValidate(configPath string, syntaxOnly bool) (s
 		args = append(args, "--syntax-only")
 	}
 
-	return w.ExecuteCLI(args...)
+	return w.ExecuteCLI(ctx, args...)
 }
 
 // WarpgateInit executes the warpgate init command
-func (w *WarpgateClient) WarpgateInit(name string, opts InitOptions) (string, error) {
+func (w *WarpgateClient) WarpgateInit(ctx context.Context, name string, opts InitOptions) (string, error) {
 	args := []string{"init"}
 
 	if name != "" {
@@ -346,7 +347,7 @@ func (w *WarpgateClient) WarpgateInit(name string, opts InitOptions) (string, er
 		args = append(args, "--from", opts.FromTemplate)
 	}
 
-	return w.ExecuteCLI(args...)
+	return w.ExecuteCLI(ctx, args...)
 }
 
 // InitOptions contains options for the warpgate init command
@@ -356,7 +357,7 @@ type InitOptions struct {
 }
 
 // WarpgateTemplatesList lists templates from the registry
-func (w *WarpgateClient) WarpgateTemplatesList(source, format string) (string, error) {
+func (w *WarpgateClient) WarpgateTemplatesList(ctx context.Context, source, format string) (string, error) {
 	args := []string{"templates", "list"}
 
 	if source != "" {
@@ -367,17 +368,17 @@ func (w *WarpgateClient) WarpgateTemplatesList(source, format string) (string, e
 		args = append(args, "--format", format)
 	}
 
-	return w.ExecuteCLI(args...)
+	return w.ExecuteCLI(ctx, args...)
 }
 
 // WarpgateTemplatesInfo gets information about a template
-func (w *WarpgateClient) WarpgateTemplatesInfo(template string) (string, error) {
+func (w *WarpgateClient) WarpgateTemplatesInfo(ctx context.Context, template string) (string, error) {
 	args := []string{"templates", "info", template}
-	return w.ExecuteCLI(args...)
+	return w.ExecuteCLI(ctx, args...)
 }
 
 // WarpgateTemplatesAdd adds a template source
-func (w *WarpgateClient) WarpgateTemplatesAdd(source string, name string) (string, error) {
+func (w *WarpgateClient) WarpgateTemplatesAdd(ctx context.Context, source string, name string) (string, error) {
 	args := []string{"templates", "add"}
 
 	if name != "" {
@@ -385,17 +386,17 @@ func (w *WarpgateClient) WarpgateTemplatesAdd(source string, name string) (strin
 	}
 	args = append(args, source)
 
-	return w.ExecuteCLI(args...)
+	return w.ExecuteCLI(ctx, args...)
 }
 
 // WarpgateTemplatesRemove removes a template source
-func (w *WarpgateClient) WarpgateTemplatesRemove(nameOrPath string) (string, error) {
+func (w *WarpgateClient) WarpgateTemplatesRemove(ctx context.Context, nameOrPath string) (string, error) {
 	args := []string{"templates", "remove", nameOrPath}
-	return w.ExecuteCLI(args...)
+	return w.ExecuteCLI(ctx, args...)
 }
 
 // WarpgateManifestsCreate creates a multi-arch manifest
-func (w *WarpgateClient) WarpgateManifestsCreate(name string, images []string, push bool) (string, error) {
+func (w *WarpgateClient) WarpgateManifestsCreate(ctx context.Context, name string, images []string, push bool) (string, error) {
 	args := []string{"manifests", "create", name}
 	args = append(args, images...)
 
@@ -403,56 +404,56 @@ func (w *WarpgateClient) WarpgateManifestsCreate(name string, images []string, p
 		args = append(args, "--push")
 	}
 
-	return w.ExecuteCLI(args...)
+	return w.ExecuteCLI(ctx, args...)
 }
 
 // WarpgateManifestsPush pushes a manifest
-func (w *WarpgateClient) WarpgateManifestsPush(name string, purge bool) (string, error) {
+func (w *WarpgateClient) WarpgateManifestsPush(ctx context.Context, name string, purge bool) (string, error) {
 	args := []string{"manifests", "push", name}
 
 	if purge {
 		args = append(args, "--purge")
 	}
 
-	return w.ExecuteCLI(args...)
+	return w.ExecuteCLI(ctx, args...)
 }
 
 // WarpgateConfigGet gets a configuration value
-func (w *WarpgateClient) WarpgateConfigGet(key string) (string, error) {
+func (w *WarpgateClient) WarpgateConfigGet(ctx context.Context, key string) (string, error) {
 	args := []string{"config", "get"}
 
 	if key != "" {
 		args = append(args, key)
 	}
 
-	return w.ExecuteCLI(args...)
+	return w.ExecuteCLI(ctx, args...)
 }
 
 // WarpgateConfigSet sets a configuration value
-func (w *WarpgateClient) WarpgateConfigSet(key, value string) (string, error) {
+func (w *WarpgateClient) WarpgateConfigSet(ctx context.Context, key, value string) (string, error) {
 	args := []string{"config", "set", key, value}
-	return w.ExecuteCLI(args...)
+	return w.ExecuteCLI(ctx, args...)
 }
 
 // WarpgateConfigShow shows current configuration
-func (w *WarpgateClient) WarpgateConfigShow() (string, error) {
+func (w *WarpgateClient) WarpgateConfigShow(ctx context.Context) (string, error) {
 	args := []string{"config", "show"}
-	return w.ExecuteCLI(args...)
+	return w.ExecuteCLI(ctx, args...)
 }
 
 // WarpgateConvert converts a Packer template to warpgate format
-func (w *WarpgateClient) WarpgateConvert(source, output string) (string, error) {
+func (w *WarpgateClient) WarpgateConvert(ctx context.Context, source, output string) (string, error) {
 	args := []string{"convert", "packer", source}
 
 	if output != "" {
 		args = append(args, "--output", output)
 	}
 
-	return w.ExecuteCLI(args...)
+	return w.ExecuteCLI(ctx, args...)
 }
 
 // WarpgateManifestsList lists available manifest tags for an image
-func (w *WarpgateClient) WarpgateManifestsList(opts ManifestsListOptions) (string, error) {
+func (w *WarpgateClient) WarpgateManifestsList(ctx context.Context, opts ManifestsListOptions) (string, error) {
 	args := []string{"manifests", "list"}
 
 	if opts.Name != "" {
@@ -471,7 +472,7 @@ func (w *WarpgateClient) WarpgateManifestsList(opts ManifestsListOptions) (strin
 		args = append(args, "--auth-file", opts.AuthFile)
 	}
 
-	return w.ExecuteCLI(args...)
+	return w.ExecuteCLI(ctx, args...)
 }
 
 // ManifestsListOptions contains options for the manifests list command
@@ -483,7 +484,7 @@ type ManifestsListOptions struct {
 }
 
 // WarpgateManifestsInspect inspects a multi-architecture manifest
-func (w *WarpgateClient) WarpgateManifestsInspect(opts ManifestsInspectOptions) (string, error) {
+func (w *WarpgateClient) WarpgateManifestsInspect(ctx context.Context, opts ManifestsInspectOptions) (string, error) {
 	args := []string{"manifests", "inspect"}
 
 	if opts.Name != "" {
@@ -506,7 +507,7 @@ func (w *WarpgateClient) WarpgateManifestsInspect(opts ManifestsInspectOptions) 
 		args = append(args, "--auth-file", opts.AuthFile)
 	}
 
-	return w.ExecuteCLI(args...)
+	return w.ExecuteCLI(ctx, args...)
 }
 
 // ManifestsInspectOptions contains options for the manifests inspect command
@@ -519,14 +520,14 @@ type ManifestsInspectOptions struct {
 }
 
 // WarpgateValidateConfig validates a warpgate config file
-func (w *WarpgateClient) WarpgateValidateConfig(configPath string) (string, error) {
+func (w *WarpgateClient) WarpgateValidateConfig(ctx context.Context, configPath string) (string, error) {
 	args := []string{"validate"}
 
 	if configPath != "" {
 		args = append(args, configPath)
 	}
 
-	return w.ExecuteCLI(args...)
+	return w.ExecuteCLI(ctx, args...)
 }
 
 // OutputCallback is called for each line of output during streaming execution
@@ -555,12 +556,12 @@ func splitLinesOrCarriageReturn(data []byte, atEOF bool) (advance int, token []b
 }
 
 // ExecuteCLIStreaming runs a warpgate CLI command with streaming output
-func (w *WarpgateClient) ExecuteCLIStreaming(callback OutputCallback, args ...string) (string, error) {
+func (w *WarpgateClient) ExecuteCLIStreaming(ctx context.Context, callback OutputCallback, args ...string) (string, error) {
 	if !w.cliDetected {
 		return "", fmt.Errorf("warpgate CLI is not available")
 	}
 
-	cmd := exec.Command(w.binaryPath, args...) //nolint:gosec // G204: warpgate CLI execution with validated binary
+	cmd := exec.CommandContext(ctx, w.binaryPath, args...) //nolint:gosec // G204: warpgate CLI execution with validated binary
 	if w.repoPath != "" {
 		cmd.Dir = w.repoPath
 	}
@@ -636,7 +637,7 @@ func (w *WarpgateClient) ExecuteCLIStreaming(callback OutputCallback, args ...st
 }
 
 // WarpgateBuildStreaming executes the warpgate build command with streaming output
-func (w *WarpgateClient) WarpgateBuildStreaming(template string, opts BuildOptions, callback OutputCallback) (string, error) {
+func (w *WarpgateClient) WarpgateBuildStreaming(ctx context.Context, template string, opts BuildOptions, callback OutputCallback) (string, error) {
 	args := []string{"build"}
 
 	if opts.Template != "" {
@@ -680,7 +681,7 @@ func (w *WarpgateClient) WarpgateBuildStreaming(template string, opts BuildOptio
 		}
 	}
 
-	return w.ExecuteCLIStreaming(callback, args...)
+	return w.ExecuteCLIStreaming(ctx, callback, args...)
 }
 
 // RegistryDeleteOptions contains options for deleting images from a registry
@@ -715,7 +716,7 @@ func DetectRegistryTool() (string, error) {
 }
 
 // RegistryDelete deletes an image from a container registry
-func (w *WarpgateClient) RegistryDelete(opts RegistryDeleteOptions) (string, error) {
+func (w *WarpgateClient) RegistryDelete(ctx context.Context, opts RegistryDeleteOptions) (string, error) {
 	toolPath, err := DetectRegistryTool()
 	if err != nil {
 		return "", err
@@ -745,23 +746,23 @@ func (w *WarpgateClient) RegistryDelete(opts RegistryDeleteOptions) (string, err
 		}
 
 		if opts.DryRun {
-			results.WriteString(fmt.Sprintf("[DRY RUN] Would delete: %s\n", imageRef))
+			fmt.Fprintf(&results, "[DRY RUN] Would delete: %s\n", imageRef)
 			continue
 		}
 
-		cmd := exec.Command(toolPath, args...) //nolint:gosec // G204: registry tool execution with detected binary
+		cmd := exec.CommandContext(ctx, toolPath, args...) //nolint:gosec // G204: registry tool execution with detected binary
 		output, err := cmd.CombinedOutput()
 		if err != nil {
 			return results.String(), fmt.Errorf("failed to delete %s: %w\nOutput: %s", imageRef, err, string(output))
 		}
-		results.WriteString(fmt.Sprintf("Deleted: %s\n", imageRef))
+		fmt.Fprintf(&results, "Deleted: %s\n", imageRef)
 	}
 
 	return results.String(), nil
 }
 
 // RegistryCopy copies an image between registries
-func (w *WarpgateClient) RegistryCopy(opts RegistryCopyOptions) (string, error) {
+func (w *WarpgateClient) RegistryCopy(ctx context.Context, opts RegistryCopyOptions) (string, error) {
 	toolPath, err := DetectRegistryTool()
 	if err != nil {
 		return "", err
@@ -798,7 +799,7 @@ func (w *WarpgateClient) RegistryCopy(opts RegistryCopyOptions) (string, error) 
 		return "", fmt.Errorf("%s requires pull-tag-push workflow; use skopeo or crane for direct copy", tool)
 	}
 
-	cmd := exec.Command(toolPath, args...) //nolint:gosec // G204: registry tool execution with detected binary
+	cmd := exec.CommandContext(ctx, toolPath, args...) //nolint:gosec // G204: registry tool execution with detected binary
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return string(output), fmt.Errorf("failed to copy image: %w\nOutput: %s", err, string(output))

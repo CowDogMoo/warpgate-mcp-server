@@ -33,7 +33,7 @@ func warpgateConvert(s *server.MCPServer, logger *logging.Logger, warpgatePath s
 		},
 	}
 
-	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		source := request.GetString("source", "")
 		if source == "" {
 			return mcp.NewToolResultError("source is required and must be a string"), nil
@@ -51,7 +51,7 @@ func warpgateConvert(s *server.MCPServer, logger *logging.Logger, warpgatePath s
 
 		output := request.GetString("output", "")
 
-		result, err := wg.WarpgateConvert(source, output)
+		result, err := wg.WarpgateConvert(ctx, source, output)
 		if err != nil {
 			logger.Errorf("Failed to convert template: %v", err)
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to convert template: %v\n%s", err, result)), nil

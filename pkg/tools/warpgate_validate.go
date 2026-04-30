@@ -33,7 +33,7 @@ func warpgateValidate(s *server.MCPServer, logger *logging.Logger, warpgatePath 
 		},
 	}
 
-	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		template := request.GetString("template", "")
 		if template == "" {
 			return mcp.NewToolResultError("template is required and must be a string"), nil
@@ -51,7 +51,7 @@ func warpgateValidate(s *server.MCPServer, logger *logging.Logger, warpgatePath 
 
 		syntaxOnly := request.GetBool("syntax_only", false)
 
-		output, err := wg.WarpgateValidate(template, syntaxOnly)
+		output, err := wg.WarpgateValidate(ctx, template, syntaxOnly)
 		if err != nil {
 			logger.Errorf("Validation failed: %v", err)
 			return mcp.NewToolResultError(fmt.Sprintf("Validation failed: %v\n%s", err, output)), nil

@@ -75,7 +75,7 @@ func warpgateBuild(s *server.MCPServer, logger *logging.Logger, warpgatePath str
 		},
 	}
 
-	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		template := request.GetString("template", "")
 		if template == "" {
 			return mcp.NewToolResultError("template is required and must be a string"), nil
@@ -114,7 +114,7 @@ func warpgateBuild(s *server.MCPServer, logger *logging.Logger, warpgatePath str
 			}
 		}
 
-		output, err := wg.WarpgateBuild(template, opts)
+		output, err := wg.WarpgateBuild(ctx, template, opts)
 		if err != nil {
 			logger.Errorf("Build failed: %v", err)
 			return mcp.NewToolResultError(fmt.Sprintf("Build failed: %v\n%s", err, output)), nil

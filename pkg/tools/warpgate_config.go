@@ -28,7 +28,7 @@ func warpgateConfigGet(s *server.MCPServer, logger *logging.Logger, warpgatePath
 		},
 	}
 
-	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		wg, err := client.NewWarpgateClient(warpgatePath)
 		if err != nil {
 			logger.Errorf("Failed to create Warpgate client: %v", err)
@@ -41,7 +41,7 @@ func warpgateConfigGet(s *server.MCPServer, logger *logging.Logger, warpgatePath
 
 		key := request.GetString("key", "")
 
-		output, err := wg.WarpgateConfigGet(key)
+		output, err := wg.WarpgateConfigGet(ctx, key)
 		if err != nil {
 			logger.Errorf("Failed to get config: %v", err)
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to get config: %v\n%s", err, output)), nil
@@ -73,7 +73,7 @@ func warpgateConfigSet(s *server.MCPServer, logger *logging.Logger, warpgatePath
 		},
 	}
 
-	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		key := request.GetString("key", "")
 		if key == "" {
 			return mcp.NewToolResultError("key is required and must be a string"), nil
@@ -91,7 +91,7 @@ func warpgateConfigSet(s *server.MCPServer, logger *logging.Logger, warpgatePath
 			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 1.0.0"), nil
 		}
 
-		output, err := wg.WarpgateConfigSet(key, value)
+		output, err := wg.WarpgateConfigSet(ctx, key, value)
 		if err != nil {
 			logger.Errorf("Failed to set config: %v", err)
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to set config: %v\n%s", err, output)), nil
@@ -114,7 +114,7 @@ func warpgateConfigShow(s *server.MCPServer, logger *logging.Logger, warpgatePat
 		},
 	}
 
-	handler := func(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		wg, err := client.NewWarpgateClient(warpgatePath)
 		if err != nil {
 			logger.Errorf("Failed to create Warpgate client: %v", err)
@@ -125,7 +125,7 @@ func warpgateConfigShow(s *server.MCPServer, logger *logging.Logger, warpgatePat
 			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 1.0.0"), nil
 		}
 
-		output, err := wg.WarpgateConfigShow()
+		output, err := wg.WarpgateConfigShow(ctx)
 		if err != nil {
 			logger.Errorf("Failed to show config: %v", err)
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to show config: %v\n%s", err, output)), nil

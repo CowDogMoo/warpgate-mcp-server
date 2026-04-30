@@ -165,7 +165,7 @@ func warpgateBuildStreaming(s *server.MCPServer, logger *logging.Logger, warpgat
 		}
 
 		// Run the streaming build
-		output, err := wg.WarpgateBuildStreaming(template, opts, callback)
+		output, err := wg.WarpgateBuildStreaming(ctx, template, opts, callback)
 
 		// Write complete output to log file (EXACTLY what you'd see in terminal)
 		if buildLogFile != nil {

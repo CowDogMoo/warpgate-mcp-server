@@ -4,6 +4,7 @@
 package client
 
 import (
+	"context"
 	"testing"
 )
 
@@ -143,7 +144,7 @@ func TestMockWarpgateClientStreaming(t *testing.T) {
 		receivedLines = append(receivedLines, line)
 	}
 
-	result, err := mock.ExecuteCLIStreaming(callback, "build", "test")
+	result, err := mock.ExecuteCLIStreaming(context.Background(), callback, "build", "test")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -184,7 +185,7 @@ func TestMockWarpgateClientBuildStreaming(t *testing.T) {
 		Push:   true,
 	}
 
-	result, err := mock.WarpgateBuildStreaming("test-template", opts, callback)
+	result, err := mock.WarpgateBuildStreaming(context.Background(), "test-template", opts, callback)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -217,7 +218,7 @@ func TestMockWarpgateClientRegistryDelete(t *testing.T) {
 		DryRun:   false,
 	}
 
-	result, err := mock.RegistryDelete(opts)
+	result, err := mock.RegistryDelete(context.Background(), opts)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -246,7 +247,7 @@ func TestMockWarpgateClientRegistryCopy(t *testing.T) {
 		PreserveDigests: true,
 	}
 
-	result, err := mock.RegistryCopy(opts)
+	result, err := mock.RegistryCopy(context.Background(), opts)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}

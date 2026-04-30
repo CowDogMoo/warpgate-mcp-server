@@ -4,6 +4,8 @@
 // Package client provides the warpgate CLI client interface and implementations.
 package client
 
+import "context"
+
 // WarpgateClientInterface defines the interface for warpgate client operations
 // This allows for easy mocking in tests
 type WarpgateClientInterface interface {
@@ -14,40 +16,40 @@ type WarpgateClientInterface interface {
 	GetRepoPath() string
 
 	// CLI execution
-	ExecuteCLI(args ...string) (string, error)
-	ExecuteCLIWithWorkdir(workdir string, args ...string) (string, error)
-	ExecuteCLIStreaming(callback OutputCallback, args ...string) (string, error)
+	ExecuteCLI(ctx context.Context, args ...string) (string, error)
+	ExecuteCLIWithWorkdir(ctx context.Context, workdir string, args ...string) (string, error)
+	ExecuteCLIStreaming(ctx context.Context, callback OutputCallback, args ...string) (string, error)
 
 	// Build operations
-	WarpgateBuild(template string, opts BuildOptions) (string, error)
-	WarpgateBuildStreaming(template string, opts BuildOptions, callback OutputCallback) (string, error)
-	WarpgateValidate(configPath string, syntaxOnly bool) (string, error)
-	WarpgateInit(name string, opts InitOptions) (string, error)
+	WarpgateBuild(ctx context.Context, template string, opts BuildOptions) (string, error)
+	WarpgateBuildStreaming(ctx context.Context, template string, opts BuildOptions, callback OutputCallback) (string, error)
+	WarpgateValidate(ctx context.Context, configPath string, syntaxOnly bool) (string, error)
+	WarpgateInit(ctx context.Context, name string, opts InitOptions) (string, error)
 
 	// Template operations
-	WarpgateTemplatesList(source, format string) (string, error)
-	WarpgateTemplatesInfo(template string) (string, error)
-	WarpgateTemplatesAdd(source string, name string) (string, error)
-	WarpgateTemplatesRemove(nameOrPath string) (string, error)
+	WarpgateTemplatesList(ctx context.Context, source, format string) (string, error)
+	WarpgateTemplatesInfo(ctx context.Context, template string) (string, error)
+	WarpgateTemplatesAdd(ctx context.Context, source string, name string) (string, error)
+	WarpgateTemplatesRemove(ctx context.Context, nameOrPath string) (string, error)
 
 	// Manifest operations
-	WarpgateManifestsCreate(name string, images []string, push bool) (string, error)
-	WarpgateManifestsPush(name string, purge bool) (string, error)
-	WarpgateManifestsList(opts ManifestsListOptions) (string, error)
-	WarpgateManifestsInspect(opts ManifestsInspectOptions) (string, error)
+	WarpgateManifestsCreate(ctx context.Context, name string, images []string, push bool) (string, error)
+	WarpgateManifestsPush(ctx context.Context, name string, purge bool) (string, error)
+	WarpgateManifestsList(ctx context.Context, opts ManifestsListOptions) (string, error)
+	WarpgateManifestsInspect(ctx context.Context, opts ManifestsInspectOptions) (string, error)
 
 	// Config operations
-	WarpgateConfigGet(key string) (string, error)
-	WarpgateConfigSet(key, value string) (string, error)
-	WarpgateConfigShow() (string, error)
+	WarpgateConfigGet(ctx context.Context, key string) (string, error)
+	WarpgateConfigSet(ctx context.Context, key, value string) (string, error)
+	WarpgateConfigShow(ctx context.Context) (string, error)
 
 	// Conversion
-	WarpgateConvert(source, output string) (string, error)
-	WarpgateValidateConfig(configPath string) (string, error)
+	WarpgateConvert(ctx context.Context, source, output string) (string, error)
+	WarpgateValidateConfig(ctx context.Context, configPath string) (string, error)
 
 	// Registry operations
-	RegistryDelete(opts RegistryDeleteOptions) (string, error)
-	RegistryCopy(opts RegistryCopyOptions) (string, error)
+	RegistryDelete(ctx context.Context, opts RegistryDeleteOptions) (string, error)
+	RegistryCopy(ctx context.Context, opts RegistryCopyOptions) (string, error)
 }
 
 // Ensure WarpgateClient implements the interface
@@ -165,65 +167,65 @@ func (m *MockWarpgateClient) GetRepoPath() string {
 }
 
 // ExecuteCLI mocks CLI execution
-func (m *MockWarpgateClient) ExecuteCLI(args ...string) (string, error) {
+func (m *MockWarpgateClient) ExecuteCLI(_ context.Context, args ...string) (string, error) {
 	m.LastExecuteCLIArgs = args
 	return m.ExecuteCLIResponse, m.ExecuteCLIError
 }
 
 // ExecuteCLIWithWorkdir mocks CLI execution with workdir
-func (m *MockWarpgateClient) ExecuteCLIWithWorkdir(_ string, args ...string) (string, error) {
+func (m *MockWarpgateClient) ExecuteCLIWithWorkdir(_ context.Context, _ string, args ...string) (string, error) {
 	m.LastExecuteCLIArgs = args
 	return m.ExecuteCLIResponse, m.ExecuteCLIError
 }
 
 // WarpgateBuild mocks the build command
-func (m *MockWarpgateClient) WarpgateBuild(template string, opts BuildOptions) (string, error) {
+func (m *MockWarpgateClient) WarpgateBuild(_ context.Context, template string, opts BuildOptions) (string, error) {
 	m.LastBuildTemplate = template
 	m.LastBuildOptions = opts
 	return m.BuildResponse, m.BuildError
 }
 
 // WarpgateValidate mocks the validate command
-func (m *MockWarpgateClient) WarpgateValidate(configPath string, _ bool) (string, error) {
+func (m *MockWarpgateClient) WarpgateValidate(_ context.Context, configPath string, _ bool) (string, error) {
 	m.LastValidatePath = configPath
 	return m.ValidateResponse, m.ValidateError
 }
 
 // WarpgateInit mocks the init command
-func (m *MockWarpgateClient) WarpgateInit(name string, opts InitOptions) (string, error) {
+func (m *MockWarpgateClient) WarpgateInit(_ context.Context, name string, opts InitOptions) (string, error) {
 	m.LastInitName = name
 	m.LastInitOptions = opts
 	return m.InitResponse, m.InitError
 }
 
 // WarpgateTemplatesList mocks the templates list command
-func (m *MockWarpgateClient) WarpgateTemplatesList(source, format string) (string, error) {
+func (m *MockWarpgateClient) WarpgateTemplatesList(_ context.Context, source, format string) (string, error) {
 	m.LastTemplatesListSource = source
 	m.LastTemplatesListFormat = format
 	return m.TemplatesListResponse, m.TemplatesListError
 }
 
 // WarpgateTemplatesInfo mocks the templates info command
-func (m *MockWarpgateClient) WarpgateTemplatesInfo(template string) (string, error) {
+func (m *MockWarpgateClient) WarpgateTemplatesInfo(_ context.Context, template string) (string, error) {
 	m.LastTemplatesInfoTemplate = template
 	return m.TemplatesInfoResponse, m.TemplatesInfoError
 }
 
 // WarpgateTemplatesAdd mocks the templates add command
-func (m *MockWarpgateClient) WarpgateTemplatesAdd(source string, name string) (string, error) {
+func (m *MockWarpgateClient) WarpgateTemplatesAdd(_ context.Context, source string, name string) (string, error) {
 	m.LastTemplatesAddSource = source
 	m.LastTemplatesAddName = name
 	return m.TemplatesAddResponse, m.TemplatesAddError
 }
 
 // WarpgateTemplatesRemove mocks the templates remove command
-func (m *MockWarpgateClient) WarpgateTemplatesRemove(nameOrPath string) (string, error) {
+func (m *MockWarpgateClient) WarpgateTemplatesRemove(_ context.Context, nameOrPath string) (string, error) {
 	m.LastTemplatesRemoveName = nameOrPath
 	return m.TemplatesRemoveResponse, m.TemplatesRemoveError
 }
 
 // WarpgateManifestsCreate mocks the manifests create command
-func (m *MockWarpgateClient) WarpgateManifestsCreate(name string, images []string, push bool) (string, error) {
+func (m *MockWarpgateClient) WarpgateManifestsCreate(_ context.Context, name string, images []string, push bool) (string, error) {
 	m.LastManifestsCreateName = name
 	m.LastManifestsCreateImages = images
 	m.LastManifestsCreatePush = push
@@ -231,57 +233,57 @@ func (m *MockWarpgateClient) WarpgateManifestsCreate(name string, images []strin
 }
 
 // WarpgateManifestsPush mocks the manifests push command
-func (m *MockWarpgateClient) WarpgateManifestsPush(name string, purge bool) (string, error) {
+func (m *MockWarpgateClient) WarpgateManifestsPush(_ context.Context, name string, purge bool) (string, error) {
 	m.LastManifestsPushName = name
 	m.LastManifestsPushPurge = purge
 	return m.ManifestsPushResponse, m.ManifestsPushError
 }
 
 // WarpgateManifestsList mocks the manifests list command
-func (m *MockWarpgateClient) WarpgateManifestsList(opts ManifestsListOptions) (string, error) {
+func (m *MockWarpgateClient) WarpgateManifestsList(_ context.Context, opts ManifestsListOptions) (string, error) {
 	m.LastManifestsListOptions = opts
 	return m.ManifestsListResponse, m.ManifestsListError
 }
 
 // WarpgateManifestsInspect mocks the manifests inspect command
-func (m *MockWarpgateClient) WarpgateManifestsInspect(opts ManifestsInspectOptions) (string, error) {
+func (m *MockWarpgateClient) WarpgateManifestsInspect(_ context.Context, opts ManifestsInspectOptions) (string, error) {
 	m.LastManifestsInspectOpts = opts
 	return m.ManifestsInspectResponse, m.ManifestsInspectError
 }
 
 // WarpgateConfigGet mocks the config get command
-func (m *MockWarpgateClient) WarpgateConfigGet(key string) (string, error) {
+func (m *MockWarpgateClient) WarpgateConfigGet(_ context.Context, key string) (string, error) {
 	m.LastConfigGetKey = key
 	return m.ConfigGetResponse, m.ConfigGetError
 }
 
 // WarpgateConfigSet mocks the config set command
-func (m *MockWarpgateClient) WarpgateConfigSet(key, value string) (string, error) {
+func (m *MockWarpgateClient) WarpgateConfigSet(_ context.Context, key, value string) (string, error) {
 	m.LastConfigSetKey = key
 	m.LastConfigSetValue = value
 	return m.ConfigSetResponse, m.ConfigSetError
 }
 
 // WarpgateConfigShow mocks the config show command
-func (m *MockWarpgateClient) WarpgateConfigShow() (string, error) {
+func (m *MockWarpgateClient) WarpgateConfigShow(_ context.Context) (string, error) {
 	return m.ConfigShowResponse, m.ConfigShowError
 }
 
 // WarpgateConvert mocks the convert command
-func (m *MockWarpgateClient) WarpgateConvert(source, output string) (string, error) {
+func (m *MockWarpgateClient) WarpgateConvert(_ context.Context, source, output string) (string, error) {
 	m.LastConvertSource = source
 	m.LastConvertOutput = output
 	return m.ConvertResponse, m.ConvertError
 }
 
 // WarpgateValidateConfig mocks the validate config command
-func (m *MockWarpgateClient) WarpgateValidateConfig(configPath string) (string, error) {
+func (m *MockWarpgateClient) WarpgateValidateConfig(_ context.Context, configPath string) (string, error) {
 	m.LastValidateConfigPath = configPath
 	return m.ValidateConfigResponse, m.ValidateConfigError
 }
 
 // ExecuteCLIStreaming mocks streaming CLI execution
-func (m *MockWarpgateClient) ExecuteCLIStreaming(callback OutputCallback, args ...string) (string, error) {
+func (m *MockWarpgateClient) ExecuteCLIStreaming(_ context.Context, callback OutputCallback, args ...string) (string, error) {
 	m.LastExecuteCLIArgs = args
 	// Simulate streaming by calling callback for each line
 	for _, line := range m.ExecuteCLIStreamingLines {
@@ -293,7 +295,7 @@ func (m *MockWarpgateClient) ExecuteCLIStreaming(callback OutputCallback, args .
 }
 
 // WarpgateBuildStreaming mocks streaming build command
-func (m *MockWarpgateClient) WarpgateBuildStreaming(template string, opts BuildOptions, callback OutputCallback) (string, error) {
+func (m *MockWarpgateClient) WarpgateBuildStreaming(_ context.Context, template string, opts BuildOptions, callback OutputCallback) (string, error) {
 	m.LastBuildTemplate = template
 	m.LastBuildOptions = opts
 	m.LastBuildCallback = callback
@@ -307,13 +309,13 @@ func (m *MockWarpgateClient) WarpgateBuildStreaming(template string, opts BuildO
 }
 
 // RegistryDelete mocks the registry delete command
-func (m *MockWarpgateClient) RegistryDelete(opts RegistryDeleteOptions) (string, error) {
+func (m *MockWarpgateClient) RegistryDelete(_ context.Context, opts RegistryDeleteOptions) (string, error) {
 	m.LastRegistryDeleteOptions = opts
 	return m.RegistryDeleteResponse, m.RegistryDeleteError
 }
 
 // RegistryCopy mocks the registry copy command
-func (m *MockWarpgateClient) RegistryCopy(opts RegistryCopyOptions) (string, error) {
+func (m *MockWarpgateClient) RegistryCopy(_ context.Context, opts RegistryCopyOptions) (string, error) {
 	m.LastRegistryCopyOptions = opts
 	return m.RegistryCopyResponse, m.RegistryCopyError
 }
