@@ -78,7 +78,8 @@ jobs:
           check-latest: true
 
       - name: Install go module dependencies
-        run: go install mvdan.cc/sh/v3/cmd/shfmt@latest
+        # shfmt pinned to last release supporting Go 1.24 (v3.13+ requires Go 1.25).
+        run: go install mvdan.cc/sh/v3/cmd/shfmt@v3.12.0
 
       - name: Renovate
         uses: renovatebot/github-action@8058cfe11252651a837a58e2e3370fbc0e72c658 # v42.0.4
