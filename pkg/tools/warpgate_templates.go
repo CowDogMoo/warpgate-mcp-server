@@ -35,7 +35,7 @@ func warpgateTemplatesList(s *server.MCPServer, logger *logging.Logger, warpgate
 		},
 	}
 
-	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		wg, err := client.NewWarpgateClient(warpgatePath)
 		if err != nil {
 			logger.Errorf("Failed to create Warpgate client: %v", err)
@@ -49,7 +49,7 @@ func warpgateTemplatesList(s *server.MCPServer, logger *logging.Logger, warpgate
 		source := request.GetString("source", "")
 		format := request.GetString("format", "")
 
-		output, err := wg.WarpgateTemplatesList(source, format)
+		output, err := wg.WarpgateTemplatesList(ctx, source, format)
 		if err != nil {
 			logger.Errorf("Failed to list templates: %v", err)
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to list templates: %v\n%s", err, output)), nil
@@ -77,7 +77,7 @@ func warpgateTemplatesInfo(s *server.MCPServer, logger *logging.Logger, warpgate
 		},
 	}
 
-	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		template := request.GetString("template", "")
 		if template == "" {
 			return mcp.NewToolResultError("template is required and must be a string"), nil
@@ -93,7 +93,7 @@ func warpgateTemplatesInfo(s *server.MCPServer, logger *logging.Logger, warpgate
 			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 1.0.0"), nil
 		}
 
-		output, err := wg.WarpgateTemplatesInfo(template)
+		output, err := wg.WarpgateTemplatesInfo(ctx, template)
 		if err != nil {
 			logger.Errorf("Failed to get template info: %v", err)
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to get template info: %v\n%s", err, output)), nil
@@ -125,7 +125,7 @@ func warpgateTemplatesAdd(s *server.MCPServer, logger *logging.Logger, warpgateP
 		},
 	}
 
-	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		source := request.GetString("source", "")
 		if source == "" {
 			return mcp.NewToolResultError("source is required and must be a string"), nil
@@ -143,7 +143,7 @@ func warpgateTemplatesAdd(s *server.MCPServer, logger *logging.Logger, warpgateP
 
 		name := request.GetString("name", "")
 
-		output, err := wg.WarpgateTemplatesAdd(source, name)
+		output, err := wg.WarpgateTemplatesAdd(ctx, source, name)
 		if err != nil {
 			logger.Errorf("Failed to add template source: %v", err)
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to add template source: %v\n%s", err, output)), nil
@@ -172,7 +172,7 @@ func warpgateTemplatesRemove(s *server.MCPServer, logger *logging.Logger, warpga
 		},
 	}
 
-	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		name := request.GetString("name", "")
 		if name == "" {
 			return mcp.NewToolResultError("name is required and must be a string"), nil
@@ -188,7 +188,7 @@ func warpgateTemplatesRemove(s *server.MCPServer, logger *logging.Logger, warpga
 			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 1.0.0"), nil
 		}
 
-		output, err := wg.WarpgateTemplatesRemove(name)
+		output, err := wg.WarpgateTemplatesRemove(ctx, name)
 		if err != nil {
 			logger.Errorf("Failed to remove template source: %v", err)
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to remove template source: %v\n%s", err, output)), nil

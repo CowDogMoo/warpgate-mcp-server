@@ -40,7 +40,7 @@ func warpgateManifestsCreate(s *server.MCPServer, logger *logging.Logger, warpga
 		},
 	}
 
-	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		name := request.GetString("name", "")
 		if name == "" {
 			return mcp.NewToolResultError("name is required and must be a string"), nil
@@ -63,7 +63,7 @@ func warpgateManifestsCreate(s *server.MCPServer, logger *logging.Logger, warpga
 
 		push := request.GetBool("push", false)
 
-		output, err := wg.WarpgateManifestsCreate(name, images, push)
+		output, err := wg.WarpgateManifestsCreate(ctx, name, images, push)
 		if err != nil {
 			logger.Errorf("Failed to create manifest: %v", err)
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to create manifest: %v\n%s", err, output)), nil
@@ -96,7 +96,7 @@ func warpgateManifestsPush(s *server.MCPServer, logger *logging.Logger, warpgate
 		},
 	}
 
-	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		name := request.GetString("name", "")
 		if name == "" {
 			return mcp.NewToolResultError("name is required and must be a string"), nil
@@ -114,7 +114,7 @@ func warpgateManifestsPush(s *server.MCPServer, logger *logging.Logger, warpgate
 
 		purge := request.GetBool("purge", false)
 
-		output, err := wg.WarpgateManifestsPush(name, purge)
+		output, err := wg.WarpgateManifestsPush(ctx, name, purge)
 		if err != nil {
 			logger.Errorf("Failed to push manifest: %v", err)
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to push manifest: %v\n%s", err, output)), nil

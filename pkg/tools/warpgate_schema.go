@@ -84,7 +84,7 @@ func warpgateSchemaValidate(s *server.MCPServer, _ *logging.Logger, warpgatePath
 		},
 	}
 
-	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var configPath string
 
 		path := request.GetString("config_path", "")
@@ -195,7 +195,7 @@ func warpgateSchemaValidate(s *server.MCPServer, _ *logging.Logger, warpgatePath
 		// Also run warpgate CLI validation if available
 		wg, err := client.NewWarpgateClient(warpgatePath)
 		if err == nil && wg.IsCLIAvailable() {
-			output, err := wg.WarpgateValidateConfig(configPath)
+			output, err := wg.WarpgateValidateConfig(ctx, configPath)
 			if err != nil {
 				result.WriteString(fmt.Sprintf("\nCLI validation failed: %v\n%s", err, output))
 			} else {

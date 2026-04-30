@@ -41,7 +41,7 @@ func warpgateRegistryList(s *server.MCPServer, logger *logging.Logger, warpgateP
 		},
 	}
 
-	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		name := request.GetString("name", "")
 		if name == "" {
 			return mcp.NewToolResultError("name is required and must be a string"), nil
@@ -69,7 +69,7 @@ func warpgateRegistryList(s *server.MCPServer, logger *logging.Logger, warpgateP
 			AuthFile:  request.GetString("auth_file", ""),
 		}
 
-		output, err := wg.WarpgateManifestsList(opts)
+		output, err := wg.WarpgateManifestsList(ctx, opts)
 		if err != nil {
 			logger.Errorf("Failed to list registry images: %v", err)
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to list registry images: %v\n%s", err, output)), nil
@@ -116,7 +116,7 @@ func warpgateRegistryInspect(s *server.MCPServer, logger *logging.Logger, warpga
 		},
 	}
 
-	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		name := request.GetString("name", "")
 		if name == "" {
 			return mcp.NewToolResultError("name is required and must be a string"), nil
@@ -145,7 +145,7 @@ func warpgateRegistryInspect(s *server.MCPServer, logger *logging.Logger, warpga
 			AuthFile:  request.GetString("auth_file", ""),
 		}
 
-		output, err := wg.WarpgateManifestsInspect(opts)
+		output, err := wg.WarpgateManifestsInspect(ctx, opts)
 		if err != nil {
 			logger.Errorf("Failed to inspect registry image: %v", err)
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to inspect registry image: %v\n%s", err, output)), nil
@@ -196,7 +196,7 @@ func warpgateRegistryDelete(s *server.MCPServer, logger *logging.Logger, warpgat
 		},
 	}
 
-	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		name := request.GetString("name", "")
 		if name == "" {
 			return mcp.NewToolResultError("name is required and must be a string"), nil
@@ -227,7 +227,7 @@ func warpgateRegistryDelete(s *server.MCPServer, logger *logging.Logger, warpgat
 			DryRun:    request.GetBool("dry_run", false),
 		}
 
-		output, err := wg.RegistryDelete(opts)
+		output, err := wg.RegistryDelete(ctx, opts)
 		if err != nil {
 			logger.Errorf("Failed to delete registry images: %v", err)
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to delete registry images: %v\n%s", err, output)), nil
@@ -275,7 +275,7 @@ func warpgateRegistryCopy(s *server.MCPServer, logger *logging.Logger, warpgateP
 		},
 	}
 
-	handler := func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		sourceImage := request.GetString("source_image", "")
 		if sourceImage == "" {
 			return mcp.NewToolResultError("source_image is required and must be a string"), nil
@@ -301,7 +301,7 @@ func warpgateRegistryCopy(s *server.MCPServer, logger *logging.Logger, warpgateP
 			PreserveDigests: request.GetBool("preserve_digests", false),
 		}
 
-		output, err := wg.RegistryCopy(opts)
+		output, err := wg.RegistryCopy(ctx, opts)
 		if err != nil {
 			logger.Errorf("Failed to copy registry image: %v", err)
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to copy registry image: %v\n%s", err, output)), nil

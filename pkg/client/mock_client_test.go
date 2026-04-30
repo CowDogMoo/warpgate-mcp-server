@@ -4,6 +4,7 @@
 package client
 
 import (
+	"context"
 	"errors"
 	"testing"
 )
@@ -37,7 +38,7 @@ func TestMockWarpgateClient_ExecuteCLI(t *testing.T) {
 	mock := NewMockWarpgateClient()
 	mock.ExecuteCLIResponse = "version: v3.0.0"
 
-	result, err := mock.ExecuteCLI("version")
+	result, err := mock.ExecuteCLI(context.Background(), "version")
 	if err != nil {
 		t.Errorf("ExecuteCLI returned unexpected error: %v", err)
 	}
@@ -56,7 +57,7 @@ func TestMockWarpgateClient_ExecuteCLIError(t *testing.T) {
 	expectedErr := errors.New("command failed")
 	mock.ExecuteCLIError = expectedErr
 
-	_, err := mock.ExecuteCLI("build")
+	_, err := mock.ExecuteCLI(context.Background(), "build")
 	if err != expectedErr {
 		t.Errorf("ExecuteCLI error = %v, want %v", err, expectedErr)
 	}
@@ -72,7 +73,7 @@ func TestMockWarpgateClient_WarpgateBuild(t *testing.T) {
 		Push:          true,
 	}
 
-	result, err := mock.WarpgateBuild("attack-box", opts)
+	result, err := mock.WarpgateBuild(context.Background(), "attack-box", opts)
 	if err != nil {
 		t.Errorf("WarpgateBuild returned unexpected error: %v", err)
 	}
@@ -94,7 +95,7 @@ func TestMockWarpgateClient_WarpgateValidate(t *testing.T) {
 	mock := NewMockWarpgateClient()
 	mock.ValidateResponse = "Validation passed"
 
-	result, err := mock.WarpgateValidate("/path/to/config.yaml", true)
+	result, err := mock.WarpgateValidate(context.Background(), "/path/to/config.yaml", true)
 	if err != nil {
 		t.Errorf("WarpgateValidate returned unexpected error: %v", err)
 	}
@@ -117,7 +118,7 @@ func TestMockWarpgateClient_WarpgateInit(t *testing.T) {
 		FromTemplate: "base-template",
 	}
 
-	result, err := mock.WarpgateInit("my-template", opts)
+	result, err := mock.WarpgateInit(context.Background(), "my-template", opts)
 	if err != nil {
 		t.Errorf("WarpgateInit returned unexpected error: %v", err)
 	}
@@ -139,7 +140,7 @@ func TestMockWarpgateClient_WarpgateTemplatesList(t *testing.T) {
 	mock := NewMockWarpgateClient()
 	mock.TemplatesListResponse = "attack-box\nsliver\natomic-red-team"
 
-	result, err := mock.WarpgateTemplatesList("local", "table")
+	result, err := mock.WarpgateTemplatesList(context.Background(), "local", "table")
 	if err != nil {
 		t.Errorf("WarpgateTemplatesList returned unexpected error: %v", err)
 	}
@@ -161,7 +162,7 @@ func TestMockWarpgateClient_WarpgateTemplatesInfo(t *testing.T) {
 	mock := NewMockWarpgateClient()
 	mock.TemplatesInfoResponse = "Template: attack-box\nDescription: Offensive security tools"
 
-	result, err := mock.WarpgateTemplatesInfo("attack-box")
+	result, err := mock.WarpgateTemplatesInfo(context.Background(), "attack-box")
 	if err != nil {
 		t.Errorf("WarpgateTemplatesInfo returned unexpected error: %v", err)
 	}
@@ -179,7 +180,7 @@ func TestMockWarpgateClient_WarpgateTemplatesAdd(t *testing.T) {
 	mock := NewMockWarpgateClient()
 	mock.TemplatesAddResponse = "Template source added"
 
-	result, err := mock.WarpgateTemplatesAdd("https://github.com/example/templates", "my-templates")
+	result, err := mock.WarpgateTemplatesAdd(context.Background(), "https://github.com/example/templates", "my-templates")
 	if err != nil {
 		t.Errorf("WarpgateTemplatesAdd returned unexpected error: %v", err)
 	}
@@ -201,7 +202,7 @@ func TestMockWarpgateClient_WarpgateTemplatesRemove(t *testing.T) {
 	mock := NewMockWarpgateClient()
 	mock.TemplatesRemoveResponse = "Template source removed"
 
-	result, err := mock.WarpgateTemplatesRemove("my-templates")
+	result, err := mock.WarpgateTemplatesRemove(context.Background(), "my-templates")
 	if err != nil {
 		t.Errorf("WarpgateTemplatesRemove returned unexpected error: %v", err)
 	}
@@ -220,7 +221,7 @@ func TestMockWarpgateClient_WarpgateManifestsCreate(t *testing.T) {
 	mock.ManifestsCreateResponse = "Manifest created"
 
 	images := []string{"img:amd64", "img:arm64"}
-	result, err := mock.WarpgateManifestsCreate("my-manifest", images, true)
+	result, err := mock.WarpgateManifestsCreate(context.Background(), "my-manifest", images, true)
 	if err != nil {
 		t.Errorf("WarpgateManifestsCreate returned unexpected error: %v", err)
 	}
@@ -246,7 +247,7 @@ func TestMockWarpgateClient_WarpgateManifestsPush(t *testing.T) {
 	mock := NewMockWarpgateClient()
 	mock.ManifestsPushResponse = "Manifest pushed"
 
-	result, err := mock.WarpgateManifestsPush("my-manifest", true)
+	result, err := mock.WarpgateManifestsPush(context.Background(), "my-manifest", true)
 	if err != nil {
 		t.Errorf("WarpgateManifestsPush returned unexpected error: %v", err)
 	}
@@ -273,7 +274,7 @@ func TestMockWarpgateClient_WarpgateManifestsList(t *testing.T) {
 		Registry: "ghcr.io/cowdogmoo",
 	}
 
-	result, err := mock.WarpgateManifestsList(opts)
+	result, err := mock.WarpgateManifestsList(context.Background(), opts)
 	if err != nil {
 		t.Errorf("WarpgateManifestsList returned unexpected error: %v", err)
 	}
@@ -301,7 +302,7 @@ func TestMockWarpgateClient_WarpgateManifestsInspect(t *testing.T) {
 		Tags:     []string{"latest"},
 	}
 
-	result, err := mock.WarpgateManifestsInspect(opts)
+	result, err := mock.WarpgateManifestsInspect(context.Background(), opts)
 	if err != nil {
 		t.Errorf("WarpgateManifestsInspect returned unexpected error: %v", err)
 	}
@@ -319,7 +320,7 @@ func TestMockWarpgateClient_WarpgateConfigGet(t *testing.T) {
 	mock := NewMockWarpgateClient()
 	mock.ConfigGetResponse = "ghcr.io/cowdogmoo"
 
-	result, err := mock.WarpgateConfigGet("registry")
+	result, err := mock.WarpgateConfigGet(context.Background(), "registry")
 	if err != nil {
 		t.Errorf("WarpgateConfigGet returned unexpected error: %v", err)
 	}
@@ -337,7 +338,7 @@ func TestMockWarpgateClient_WarpgateConfigSet(t *testing.T) {
 	mock := NewMockWarpgateClient()
 	mock.ConfigSetResponse = "Configuration updated"
 
-	result, err := mock.WarpgateConfigSet("registry", "ghcr.io/test")
+	result, err := mock.WarpgateConfigSet(context.Background(), "registry", "ghcr.io/test")
 	if err != nil {
 		t.Errorf("WarpgateConfigSet returned unexpected error: %v", err)
 	}
@@ -359,7 +360,7 @@ func TestMockWarpgateClient_WarpgateConfigShow(t *testing.T) {
 	mock := NewMockWarpgateClient()
 	mock.ConfigShowResponse = "registry: ghcr.io/cowdogmoo\nregion: us-east-1"
 
-	result, err := mock.WarpgateConfigShow()
+	result, err := mock.WarpgateConfigShow(context.Background())
 	if err != nil {
 		t.Errorf("WarpgateConfigShow returned unexpected error: %v", err)
 	}
@@ -373,7 +374,7 @@ func TestMockWarpgateClient_WarpgateConvert(t *testing.T) {
 	mock := NewMockWarpgateClient()
 	mock.ConvertResponse = "Conversion completed"
 
-	result, err := mock.WarpgateConvert("/path/to/packer.json", "/path/to/output")
+	result, err := mock.WarpgateConvert(context.Background(), "/path/to/packer.json", "/path/to/output")
 	if err != nil {
 		t.Errorf("WarpgateConvert returned unexpected error: %v", err)
 	}
@@ -395,7 +396,7 @@ func TestMockWarpgateClient_WarpgateValidateConfig(t *testing.T) {
 	mock := NewMockWarpgateClient()
 	mock.ValidateConfigResponse = "Configuration is valid"
 
-	result, err := mock.WarpgateValidateConfig("/path/to/warpgate.yaml")
+	result, err := mock.WarpgateValidateConfig(context.Background(), "/path/to/warpgate.yaml")
 	if err != nil {
 		t.Errorf("WarpgateValidateConfig returned unexpected error: %v", err)
 	}
@@ -433,7 +434,7 @@ func TestMockWarpgateClient_ErrorResponses(t *testing.T) {
 				mock.BuildError = expectedErr
 			},
 			execute: func() error {
-				_, err := mock.WarpgateBuild("test", BuildOptions{})
+				_, err := mock.WarpgateBuild(context.Background(), "test", BuildOptions{})
 				return err
 			},
 		},
@@ -443,7 +444,7 @@ func TestMockWarpgateClient_ErrorResponses(t *testing.T) {
 				mock.ValidateError = expectedErr
 			},
 			execute: func() error {
-				_, err := mock.WarpgateValidate("path", false)
+				_, err := mock.WarpgateValidate(context.Background(), "path", false)
 				return err
 			},
 		},
@@ -453,7 +454,7 @@ func TestMockWarpgateClient_ErrorResponses(t *testing.T) {
 				mock.InitError = expectedErr
 			},
 			execute: func() error {
-				_, err := mock.WarpgateInit("name", InitOptions{})
+				_, err := mock.WarpgateInit(context.Background(), "name", InitOptions{})
 				return err
 			},
 		},
@@ -463,7 +464,7 @@ func TestMockWarpgateClient_ErrorResponses(t *testing.T) {
 				mock.TemplatesListError = expectedErr
 			},
 			execute: func() error {
-				_, err := mock.WarpgateTemplatesList("", "")
+				_, err := mock.WarpgateTemplatesList(context.Background(), "", "")
 				return err
 			},
 		},
@@ -473,7 +474,7 @@ func TestMockWarpgateClient_ErrorResponses(t *testing.T) {
 				mock.ConfigShowError = expectedErr
 			},
 			execute: func() error {
-				_, err := mock.WarpgateConfigShow()
+				_, err := mock.WarpgateConfigShow(context.Background())
 				return err
 			},
 		},

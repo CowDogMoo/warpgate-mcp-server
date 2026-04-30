@@ -32,7 +32,7 @@ func templateReadmeResource(s *server.MCPServer, logger *logging.Logger, warpgat
 		MIMEType:    "text/markdown",
 	}
 
-	handler := func(_ context.Context, _ mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+	handler := func(ctx context.Context, _ mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
 		// This is a template resource, actual handling would need the template name
 		// For now, return a list of available templates from the warpgate CLI
 		wg, err := client.NewWarpgateClient(warpgatePath)
@@ -52,7 +52,7 @@ func templateReadmeResource(s *server.MCPServer, logger *logging.Logger, warpgat
 		}
 
 		// Use warpgate CLI to list templates
-		templatesOutput, err := wg.WarpgateTemplatesList("", "table")
+		templatesOutput, err := wg.WarpgateTemplatesList(ctx, "", "table")
 		if err != nil {
 			logger.Errorf("Failed to list templates: %v", err)
 			return nil, fmt.Errorf("failed to list templates: %w", err)
@@ -83,7 +83,7 @@ func templateConfigResource(s *server.MCPServer, logger *logging.Logger, warpgat
 		MIMEType:    "text/yaml",
 	}
 
-	handler := func(_ context.Context, _ mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+	handler := func(ctx context.Context, _ mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
 		wg, err := client.NewWarpgateClient(warpgatePath)
 		if err != nil {
 			logger.Errorf("Failed to create Warpgate client: %v", err)
@@ -101,7 +101,7 @@ func templateConfigResource(s *server.MCPServer, logger *logging.Logger, warpgat
 		}
 
 		// Use warpgate CLI to get template info which includes the config
-		templatesOutput, err := wg.WarpgateTemplatesInfo("")
+		templatesOutput, err := wg.WarpgateTemplatesInfo(ctx, "")
 		if err != nil {
 			// Provide usage information since URI template parameter extraction is limited
 			result := fmt.Sprintf(`To view a template configuration, use 'warpgate_templates_info' tool with the template name.
@@ -146,7 +146,7 @@ func warpgateConfigResource(s *server.MCPServer, logger *logging.Logger, warpgat
 		MIMEType:    "text/plain",
 	}
 
-	handler := func(_ context.Context, _ mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+	handler := func(ctx context.Context, _ mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
 		wg, err := client.NewWarpgateClient(warpgatePath)
 		if err != nil {
 			logger.Errorf("Failed to create Warpgate client: %v", err)
@@ -163,7 +163,7 @@ func warpgateConfigResource(s *server.MCPServer, logger *logging.Logger, warpgat
 			}, nil
 		}
 
-		output, err := wg.WarpgateConfigShow()
+		output, err := wg.WarpgateConfigShow(ctx)
 		if err != nil {
 			logger.Errorf("Failed to get config: %v", err)
 			return nil, fmt.Errorf("failed to get warpgate config: %w", err)
