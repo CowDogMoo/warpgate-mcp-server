@@ -746,7 +746,7 @@ func (w *WarpgateClient) RegistryDelete(ctx context.Context, opts RegistryDelete
 		}
 
 		if opts.DryRun {
-			results.WriteString(fmt.Sprintf("[DRY RUN] Would delete: %s\n", imageRef))
+			fmt.Fprintf(&results, "[DRY RUN] Would delete: %s\n", imageRef)
 			continue
 		}
 
@@ -755,7 +755,7 @@ func (w *WarpgateClient) RegistryDelete(ctx context.Context, opts RegistryDelete
 		if err != nil {
 			return results.String(), fmt.Errorf("failed to delete %s: %w\nOutput: %s", imageRef, err, string(output))
 		}
-		results.WriteString(fmt.Sprintf("Deleted: %s\n", imageRef))
+		fmt.Fprintf(&results, "Deleted: %s\n", imageRef)
 	}
 
 	return results.String(), nil

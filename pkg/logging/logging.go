@@ -112,7 +112,7 @@ func GetLogDir() (string, error) {
 	}
 
 	// Create directory if it doesn't exist
-	if err := os.MkdirAll(logDir, 0750); err != nil {
+	if err := os.MkdirAll(logDir, 0750); err != nil { //nolint:gosec // G703: logDir is derived from controlled env vars and a fixed subpath
 		return "", fmt.Errorf("failed to create log directory: %w", err)
 	}
 

@@ -164,30 +164,30 @@ func warpgateSchemaValidate(s *server.MCPServer, _ *logging.Logger, warpgatePath
 
 		// Build result
 		var result strings.Builder
-		result.WriteString(fmt.Sprintf("Validation results for: %s\n\n", configPath))
+		fmt.Fprintf(&result, "Validation results for: %s\n\n", configPath)
 
 		if len(errors) == 0 && len(warnings) == 0 {
 			result.WriteString("✓ Configuration is valid\n\n")
-			result.WriteString(fmt.Sprintf("Template: %s\n", config.Name))
+			fmt.Fprintf(&result, "Template: %s\n", config.Name)
 			if config.Description != "" {
-				result.WriteString(fmt.Sprintf("Description: %s\n", config.Description))
+				fmt.Fprintf(&result, "Description: %s\n", config.Description)
 			}
 			if config.Version != "" {
-				result.WriteString(fmt.Sprintf("Version: %s\n", config.Version))
+				fmt.Fprintf(&result, "Version: %s\n", config.Version)
 			}
 		} else {
 			if len(errors) > 0 {
-				result.WriteString(fmt.Sprintf("✗ Found %d error(s):\n", len(errors)))
+				fmt.Fprintf(&result, "✗ Found %d error(s):\n", len(errors))
 				for _, err := range errors {
-					result.WriteString(fmt.Sprintf("  - %s\n", err))
+					fmt.Fprintf(&result, "  - %s\n", err)
 				}
 				result.WriteString("\n")
 			}
 
 			if len(warnings) > 0 {
-				result.WriteString(fmt.Sprintf("⚠ Found %d warning(s):\n", len(warnings)))
+				fmt.Fprintf(&result, "⚠ Found %d warning(s):\n", len(warnings))
 				for _, warn := range warnings {
-					result.WriteString(fmt.Sprintf("  - %s\n", warn))
+					fmt.Fprintf(&result, "  - %s\n", warn)
 				}
 			}
 		}
@@ -197,9 +197,9 @@ func warpgateSchemaValidate(s *server.MCPServer, _ *logging.Logger, warpgatePath
 		if err == nil && wg.IsCLIAvailable() {
 			output, err := wg.WarpgateValidateConfig(ctx, configPath)
 			if err != nil {
-				result.WriteString(fmt.Sprintf("\nCLI validation failed: %v\n%s", err, output))
+				fmt.Fprintf(&result, "\nCLI validation failed: %v\n%s", err, output)
 			} else {
-				result.WriteString(fmt.Sprintf("\n\nCLI validation: %s", output))
+				fmt.Fprintf(&result, "\n\nCLI validation: %s", output)
 			}
 		}
 
