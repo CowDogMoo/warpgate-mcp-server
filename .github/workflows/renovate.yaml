@@ -34,7 +34,7 @@ concurrency:
 
 # Retrieve BOT_USER_ID via `curl -s "https://api.github.com/users/${BOT_USERNAME}%5Bbot%5D" | jq .id`
 env:
-  GO_VERSION: 1.23
+  GO_VERSION: "1.25"
   PYTHON_VERSION: 3.13
   RENOVATE_GIT_AUTHOR: "${{ secrets.BOT_USERNAME }} <${{ secrets.BOT_USER_ID }}+${{ secrets.BOT_USERNAME }}[bot]@users.noreply.github.com>"
 
@@ -78,8 +78,7 @@ jobs:
           check-latest: true
 
       - name: Install go module dependencies
-        # shfmt pinned to last release supporting Go 1.24 (v3.13+ requires Go 1.25).
-        run: go install mvdan.cc/sh/v3/cmd/shfmt@v3.12.0
+        run: go install mvdan.cc/sh/v3/cmd/shfmt@latest
 
       - name: Renovate
         uses: renovatebot/github-action@8058cfe11252651a837a58e2e3370fbc0e72c658 # v42.0.4
