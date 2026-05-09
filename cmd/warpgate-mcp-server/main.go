@@ -14,6 +14,7 @@ import (
 	"syscall"
 
 	"github.com/cowdogmoo/warpgate-mcp-server/pkg/logging"
+	"github.com/cowdogmoo/warpgate-mcp-server/pkg/prompts"
 	"github.com/cowdogmoo/warpgate-mcp-server/pkg/resources"
 	"github.com/cowdogmoo/warpgate-mcp-server/pkg/tools"
 	"github.com/cowdogmoo/warpgate-mcp-server/version"
@@ -44,11 +45,13 @@ func NewServer(ver string, logger *logging.Logger, warpgatePath string) *server.
 		"warpgate-mcp-server",
 		ver,
 		server.WithResourceCapabilities(true, false),
+		server.WithPromptCapabilities(true),
 	)
 
-	// Register tools and resources
+	// Register tools, resources, and prompts
 	tools.RegisterTools(s, logger, warpgatePath)
 	resources.RegisterResources(s, logger, warpgatePath)
+	prompts.RegisterPrompts(s, logger)
 
 	return s
 }
