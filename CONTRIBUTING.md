@@ -1,237 +1,122 @@
-# Contributing to Warpgate MCP Server
+# Contributing
 
-Thank you for your interest in contributing! This document provides guidelines and instructions for contributing to the project.
+Thanks for your interest in contributing to the Warpgate MCP Server.
 
 ## Development Setup
 
 ### Prerequisites
 
-- Go 1.23 or later
-- pre-commit
-- Task (go-task)
-- Docker (for container builds)
-- git
+| Requirement      | Version | Notes                                  |
+| ---------------- | ------- | -------------------------------------- |
+| **Go**           | 1.24+   | Toolchain for building and testing     |
+| **Task**         | 3.x     | [go-task](https://taskfile.dev/) runner |
+| **pre-commit**   | 3.x+    | Drives format/lint/security hooks      |
+| **Docker**       | 20.10+  | Required for container builds and the Docker target |
+| **Warpgate CLI** | 1.0.0+  | The MCP server shells out to `warpgate` |
 
 ### Getting Started
 
-1. Fork and clone the repository:
-
 ```bash
-git clone https://github.com/cowdogmoo/warpgate-mcp-server.git
+# 1. Fork and clone
+git clone https://github.com/<your-fork>/warpgate-mcp-server.git
 cd warpgate-mcp-server
-```
 
-2. Install dependencies:
-
-```bash
+# 2. Install dependencies
 go mod download
-```
 
-3. Install pre-commit hooks:
-
-```bash
+# 3. Install pre-commit hooks
 pre-commit install
+
+# 4. Build and run tests
+task build
+task test
 ```
 
-4. Build the project:
+## Common Tasks
 
 ```bash
-make build
+task                 # default: install go deps + run pre-commit hooks
+task build           # build the binary with version ldflags
+task install         # install to $GOPATH/bin
+task test            # go test -race ./...
+task test-coverage   # coverage report (HTML)
+task lint            # golangci-lint run ./...
+task fmt             # go fmt ./...
+task tidy            # go mod tidy
+task docker-build    # build the local Docker image
+task install-mcp     # configure Claude Desktop to use this server
 ```
 
-5. Run tests:
+## Pull Request Workflow
 
-```bash
-make test
-```
-
-## Development Workflow
-
-### Code Quality
-
-We use several tools to maintain code quality:
-
-- **pre-commit hooks**: Automatically run before each commit
-- **golangci-lint**: Go linter aggregator
-- **gofmt/goimports**: Code formatting
-- **go vet**: Static analysis
-- **govulncheck**: Vulnerability scanning
-- **semgrep**: Security analysis
-
-### Running Pre-commit Hooks
-
-Pre-commit hooks run automatically on `git commit`, but you can also run them manually:
-
-```bash
-# Run on all files
-pre-commit run --all-files
-
-# Run on specific files
-pre-commit run --files <file1> <file2>
-```
-
-### Running Tests
-
-```bash
-# Run all tests
-make test
-
-# Run tests with coverage
-bash .hooks/run-go-tests.sh coverage
-
-# Run tests for modified files
-bash .hooks/run-go-tests.sh modified
-```
-
-### Code Formatting
-
-```bash
-# Format code
-make fmt
-
-# Check imports
-go run golang.org/x/tools/cmd/goimports -w .
-```
-
-### Linting
-
-```bash
-# Run golangci-lint
-make lint
-
-# Or directly
-golangci-lint run ./...
-```
-
-## Pull Request Process
-
-1. **Create a feature branch**:
+1. Branch from `main`:
 
    ```bash
-   git checkout -b feature/your-feature-name
+   git checkout -b feat/my-feature
    ```
 
-2. **Make your changes**:
-   - Write clear, concise commit messages
-   - Follow Go best practices
-   - Add tests for new functionality
-   - Update documentation as needed
-
-3. **Run tests and checks**:
+2. Make focused changes. Add or update tests for behavior changes.
+3. Run the full local check before pushing:
 
    ```bash
-   make test
+   task test
    pre-commit run --all-files
    ```
 
-4. **Commit your changes**:
-
-   ```bash
-   git add .
-   git commit -m "feat: add amazing feature"
-   ```
-
-5. **Push to your fork**:
-
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-
-6. **Create a Pull Request**:
-   - Provide a clear description of the changes
-   - Reference any related issues
-   - Ensure all CI checks pass
-
-## Commit Message Guidelines
-
-We follow the [Conventional Commits](https://www.conventionalcommits.org/) specification:
-
-- `feat:` New feature
-- `fix:` Bug fix
-- `docs:` Documentation changes
-- `style:` Code style changes (formatting, etc.)
-- `refactor:` Code refactoring
-- `test:` Adding or updating tests
-- `chore:` Maintenance tasks
-
-Examples:
-
-```text
-feat: add support for multi-region builds
-fix: correct template path resolution
-docs: update installation instructions
-```
+4. Use [Conventional Commits](https://www.conventionalcommits.org/) for
+   commit messages (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`).
+5. Open the PR and link any related issues. CI must be green before merge.
 
 ## Code Style
 
-- Follow standard Go conventions
-- Use meaningful variable and function names
-- Add comments for exported functions and types
-- Keep functions focused and concise
-- Write tests for new functionality
+- Follow standard Go conventions (`gofmt`, `goimports`, `golangci-lint`).
+- Add doc comments on exported types and functions.
+- Prefer table-driven tests for handlers and pure helpers.
+- Keep tools and prompts focused — one file per tool, one render function
+  per prompt so behavior can be unit-tested without the MCP server.
 
-## Testing
+## Adding a New Tool
 
-- Write unit tests for new code
-- Maintain or improve code coverage
-- Test edge cases and error conditions
-- Use table-driven tests where appropriate
+1. Create `pkg/tools/<name>.go` and define a registration function
+   (`func myTool(s *server.MCPServer, logger *logging.Logger, warpgatePath string)`).
+2. Register the tool from `pkg/tools/tools.go`.
+3. If the tool calls the Warpgate CLI, extend the client in
+   `pkg/client/warpgate.go` with a strongly-typed wrapper rather than
+   shelling out from the handler directly.
+4. Add table-driven tests under `pkg/tools/<name>_test.go`.
+5. Update the tools table in `README.md`.
 
-Example test structure:
+## Adding a New Prompt
 
-```go
-func TestFunction(t *testing.T) {
-    tests := []struct {
-        name    string
-        input   string
-        want    string
-        wantErr bool
-    }{
-        // test cases
-    }
+1. Add a `render<Name>` pure function and a registration function in
+   `pkg/prompts/prompts.go`.
+2. Register from `RegisterPrompts`.
+3. Add a unit test that asserts the rendered text contains the key tool
+   names and parameter substitutions.
+4. Update the prompts table in `README.md`.
 
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
-            // test implementation
-        })
-    }
-}
+## Releases
+
+Releases are automated by [GoReleaser](https://goreleaser.com/) on tag push.
+
+```bash
+git tag -a v0.3.0 -m "Release v0.3.0"
+git push origin v0.3.0
 ```
 
-## Documentation
+GitHub Actions builds binaries, container images, and the GitHub Release.
 
-- Update README.md for user-facing changes
-- Add godoc comments for exported types and functions
-- Update API documentation if applicable
-- Include examples in documentation
+## Reporting Issues
 
-## Release Process
+Open an issue on
+[GitHub](https://github.com/CowDogMoo/warpgate-mcp-server/issues) with:
 
-Releases are automated using GoReleaser:
-
-1. Update version in `version/version.go`
-2. Create and push a tag:
-
-   ```bash
-   git tag -a v0.2.0 -m "Release v0.2.0"
-   git push origin v0.2.0
-   ```
-
-3. GitHub Actions will automatically build and publish the release
-
-## Getting Help
-
-- Open an issue for bugs or feature requests
-- Join discussions in GitHub Discussions
-- Check existing issues and PRs before creating new ones
-
-## Code of Conduct
-
-- Be respectful and inclusive
-- Provide constructive feedback
-- Help others learn and grow
-- Follow the project's code of conduct
+- A short description of the problem
+- Steps to reproduce (template name, tool call, MCP client)
+- Output of `warpgate-mcp-server --version` and `warpgate version`
+- Relevant lines from the `--log-file` output (with secrets redacted)
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the MIT License.
+By contributing, you agree your contributions are licensed under the MIT
+License.

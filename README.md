@@ -1,420 +1,267 @@
 # Warpgate MCP Server
 
-An MCP (Model Context Protocol) server that provides tools for managing
-[Warpgate](https://github.com/CowDogMoo/warpgate) templates and workflows.
-Warpgate is a pure Go tool for building container images and AWS AMIs,
-replacing Packer with a simpler, more integrated workflow.
+**Drive [Warpgate](https://github.com/CowDogMoo/warpgate) from any MCP-aware
+agent.**
 
-## Features
+[![License](https://img.shields.io/github/license/CowDogMoo/warpgate-mcp-server?label=License&style=flat&color=blue&logo=github)](https://github.com/CowDogMoo/warpgate-mcp-server/blob/main/LICENSE)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/CowDogMoo/warpgate-mcp-server?logo=go)](https://go.dev/)
+[![Release](https://img.shields.io/github/v/release/CowDogMoo/warpgate-mcp-server?label=Release&logo=github)](https://github.com/CowDogMoo/warpgate-mcp-server/releases)
 
-### Warpgate CLI Integration
+[![Tests](https://github.com/CowDogMoo/warpgate-mcp-server/actions/workflows/tests.yaml/badge.svg)](https://github.com/CowDogMoo/warpgate-mcp-server/actions/workflows/tests.yaml)
+[![Pre-Commit](https://github.com/CowDogMoo/warpgate-mcp-server/actions/workflows/pre-commit.yaml/badge.svg)](https://github.com/CowDogMoo/warpgate-mcp-server/actions/workflows/pre-commit.yaml)
+[![Semgrep](https://github.com/CowDogMoo/warpgate-mcp-server/actions/workflows/semgrep.yaml/badge.svg)](https://github.com/CowDogMoo/warpgate-mcp-server/actions/workflows/semgrep.yaml)
+[![Renovate](https://github.com/CowDogMoo/warpgate-mcp-server/actions/workflows/renovate.yaml/badge.svg)](https://github.com/CowDogMoo/warpgate-mcp-server/actions/workflows/renovate.yaml)
 
-- **Build**: Build container images or AMIs using BuildKit
-- **Validate**: Validate warpgate.yaml template configurations
-- **Init**: Initialize new templates with scaffolding
-- **Convert**: Convert Packer templates to warpgate YAML format
+---
 
-### Template Registry
+## Overview
 
-- **List Templates**: View all templates from local, git, and official sources
-- **Template Info**: Get detailed information about templates
-- **Add Sources**: Add git repositories or local directories as template sources
-- **Remove Sources**: Remove template sources from the registry
+A [Model Context Protocol](https://modelcontextprotocol.io) server that wraps
+the [Warpgate](https://github.com/CowDogMoo/warpgate) CLI so Claude Code,
+Claude Desktop, Cursor, Continue, and other MCP clients can build container
+images and AWS AMIs, manage template repositories, and operate on container
+registries — without operators leaving the chat.
 
-### Multi-Architecture Support
+- Build OCI images and AMIs from YAML templates with BuildKit
+- Stream live build progress through MCP logging notifications
+- Manage template registries (local, git, official) end-to-end
+- Create, push, copy, and delete container images and multi-arch manifests
+- Validate `warpgate.yaml` against the embedded JSON schema
+- Convert legacy Packer templates to Warpgate format
+- Ships with reusable prompt workflows for common operator recipes
 
-- **Create Manifests**: Create multi-arch manifests from architecture-specific builds
-- **Push Manifests**: Push manifests to container registries
+**Built for:**
 
-### Registry Operations
-
-- **List Images**: List available image tags in a container registry
-- **Inspect Images**: Inspect container image manifests with architecture details
-
-### Configuration Management
-
-- **Get Config**: Retrieve warpgate configuration values
-- **Set Config**: Update warpgate configuration
-- **Show Config**: Display current configuration with all settings
-
-### Schema Validation
-
-- **Validate Schema**: Validate warpgate.yaml files against the template schema
-
-### Resources
-
-- Warpgate configuration
-- CLI information (version, binary path)
-- Template schema, README, and configuration files
+- Security teams building attack/defense imagery
+- Platform engineers standardizing base images across teams
+- Operators who'd rather describe a pipeline than click through one
 
 ## Prerequisites
 
-1. [Go](https://golang.org/dl/) 1.23 or later
-2. [Warpgate CLI](https://github.com/CowDogMoo/warpgate) >= 1.0.0
-3. [Docker](https://www.docker.com/) - For container operations
+| Requirement       | Version | Notes                                              |
+| ----------------- | ------- | -------------------------------------------------- |
+| **Go**            | 1.24+   | Required for `go install`                          |
+| **Warpgate CLI**  | 1.0.0+  | The MCP server shells out to `warpgate`            |
+| **Docker**        | 20.10+  | Required for container builds                      |
+| **Docker Buildx** | 0.8+    | Required for multi-arch builds                     |
+| **AWS CLI** (opt) | 2.x     | Required for AMI builds                            |
+| **skopeo/crane**  | -       | Required for `warpgate_registry_{copy,delete}`     |
 
-## Installation
-
-### From Source
+Install Warpgate first:
 
 ```bash
-# Clone the repository
-git clone https://github.com/cowdogmoo/warpgate-mcp-server.git
-cd warpgate-mcp-server
-
-# Build
-go build -o warpgate-mcp-server ./cmd/warpgate-mcp-server
-
-# Install to Go bin
-go install ./cmd/warpgate-mcp-server
+go install github.com/cowdogmoo/warpgate/v3/cmd/warpgate@latest
+warpgate version
 ```
 
-### Using Docker
+## Quick Start
 
 ```bash
-# Build the Docker image
-docker build -t warpgate-mcp-server:latest .
+# Install the MCP server
+go install github.com/cowdogmoo/warpgate-mcp-server/cmd/warpgate-mcp-server@latest
 
-# Or pull from registry
-docker pull ghcr.io/cowdogmoo/warpgate-mcp-server:latest
-```
-
-## Usage
-
-### Standalone Binary
-
-```bash
-# Run with auto-detected warpgate path
+# Run over stdio (auto-detects warpgate on PATH)
 warpgate-mcp-server stdio
 
-# Run with specific warpgate repository path
-warpgate-mcp-server stdio --warpgate-path /path/to/warpgate
-
-# Run with logging
-warpgate-mcp-server stdio --log-file /tmp/warpgate-mcp.log
+# Run with an explicit warpgate repo + log file
+warpgate-mcp-server stdio \
+  --warpgate-path "$HOME/cowdogmoo/warpgate" \
+  --log-file /tmp/warpgate-mcp.log
 ```
 
-### With Claude Desktop
+## Client Setup
 
-Add to your Claude Desktop configuration
-(`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+### Claude Code
+
+```bash
+claude mcp add warpgate -s user -t stdio -- \
+  warpgate-mcp-server stdio --warpgate-path "$HOME/cowdogmoo/warpgate"
+```
+
+Or, from a checked-out warpgate repository:
+
+```bash
+task install-mcp
+```
+
+### Claude Desktop
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
+or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
 
 ```json
 {
   "mcpServers": {
     "warpgate": {
       "command": "/path/to/warpgate-mcp-server",
-      "args": [
-        "stdio",
-        "--warpgate-path",
-        "/path/to/warpgate"
-      ]
+      "args": ["stdio", "--warpgate-path", "/path/to/warpgate"]
     }
   }
 }
 ```
 
-### With Claude Code
+### Docker
 
 ```bash
-# Add the server
-claude mcp add warpgate -s user -t stdio -- /path/to/warpgate-mcp-server stdio --warpgate-path /path/to/warpgate
-
-# Or use the install-mcp task from the warpgate repository
-task install-mcp
+docker run -i --rm \
+  -v "$HOME/cowdogmoo/warpgate:/warpgate:ro" \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  ghcr.io/cowdogmoo/warpgate-mcp-server:latest \
+  stdio --warpgate-path /warpgate
 ```
 
-## Available Tools
+A canonical [`server.json`](server.json) descriptor is included for
+registry-based discovery.
+
+## Tools
+
+### Build & Validate
+
+| Tool                       | Description                                                              |
+| -------------------------- | ------------------------------------------------------------------------ |
+| `warpgate_build`           | Build a container image or AMI; returns full output when complete        |
+| `warpgate_build_streaming` | Build with line-by-line progress via MCP logging notifications           |
+| `warpgate_validate`        | Validate a template directory or `warpgate.yaml` via the CLI             |
+| `warpgate_schema_validate` | Validate `warpgate.yaml` against the embedded JSON schema (no CLI call)  |
+| `warpgate_init`            | Scaffold a new template using the `warpgate init` CLI                    |
+| `create_template`          | Generate a new template directory with `warpgate.yaml`, README, scripts  |
+| `warpgate_convert`         | Convert a Packer template to `warpgate.yaml`                             |
+
+### Template Registry
+
+| Tool                        | Description                                              |
+| --------------------------- | -------------------------------------------------------- |
+| `warpgate_templates_list`   | List templates from local, git, and official sources     |
+| `warpgate_templates_info`   | Show metadata, provisioners, and computed values         |
+| `warpgate_templates_add`    | Register a git URL or local directory as a source        |
+| `warpgate_templates_remove` | Remove a registered source                               |
+
+### Manifests & Registries
+
+| Tool                       | Description                                                       |
+| -------------------------- | ----------------------------------------------------------------- |
+| `warpgate_manifests_create`| Assemble a multi-arch manifest list from per-arch refs/digests    |
+| `warpgate_manifests_push`  | Push a manifest list to its registry                              |
+| `warpgate_registry_list`   | List image tags in a registry                                     |
+| `warpgate_registry_inspect`| Inspect manifests, including per-architecture entries             |
+| `warpgate_registry_copy`   | Copy images between registries (skopeo/crane)                     |
+| `warpgate_registry_delete` | Delete tags from a registry, with `dry_run` support               |
+
+### Config
+
+| Tool                  | Description                                |
+| --------------------- | ------------------------------------------ |
+| `warpgate_config_get` | Read a config key (or all keys)            |
+| `warpgate_config_set` | Set a config key                           |
+| `warpgate_config_show`| Print the merged effective configuration   |
+
+## Prompts
+
+Prompts ship with the server as parameterized workflow recipes. MCP clients
+list them automatically; pick one and the server returns a step-by-step
+script that chains the tools above.
+
+| Prompt                    | Purpose                                                              |
+| ------------------------- | -------------------------------------------------------------------- |
+| `bootstrap_new_template`  | Scaffold, configure, validate, and run the first build of a template |
+| `debug_failed_build`      | Walk a failing build through validation, schema, config, and logs    |
+| `add_provisioner`         | Add a shell, ansible, or file provisioner to an existing template    |
+| `convert_from_packer`     | Convert a Packer template and verify it builds end-to-end            |
+| `publish_multiarch_image` | Build per-arch, assemble a manifest, push, and verify on the registry |
+
+## Resources
+
+| URI                                  | Description                                              |
+| ------------------------------------ | -------------------------------------------------------- |
+| `warpgate://config`                  | Effective `warpgate config show` output                  |
+| `warpgate://cli-info`                | Detected binary path, version, and minimum required version |
+| `warpgate://schema/template`         | JSON Schema for `warpgate.yaml` validation               |
+| `warpgate://template/{name}/readme`  | README for a specific template                           |
+| `warpgate://template/{name}/config`  | `warpgate templates info` output for a template          |
+
+## Configuration
+
+The MCP server itself takes only two flags; everything else is forwarded to
+the Warpgate CLI, which honors its own config file and `WARPGATE_*` env vars.
+
+### Server Flags
+
+| Flag               | Description                                                          |
+| ------------------ | -------------------------------------------------------------------- |
+| `--warpgate-path`  | Path to a checked-out warpgate repo; used as CWD for CLI invocations |
+| `--log-file`       | Path to write MCP server logs (stderr is reserved for the transport) |
+
+### Forwarded Environment
+
+These pass straight through to the Warpgate CLI; refer to the
+[Warpgate CLI configuration guide](https://github.com/CowDogMoo/warpgate/blob/main/docs/cli-configuration.md)
+for the full list.
+
+| Variable                      | Description                       | Default   |
+| ----------------------------- | --------------------------------- | --------- |
+| `WARPGATE_LOG_LEVEL`          | Log verbosity (debug/info/...)    | `info`    |
+| `WARPGATE_LOG_FORMAT`         | Log format (text, json, color)    | `color`   |
+| `WARPGATE_REGISTRY_DEFAULT`   | Default container registry        | `ghcr.io` |
+| `WARPGATE_BUILD_DEFAULT_ARCH` | Default build architectures       | `amd64`   |
+| `AWS_REGION`                  | AWS region for AMI builds         | -         |
+| `AWS_PROFILE`                 | AWS credentials profile           | -         |
+
+## Development
+
+### Build & Test
+
+```bash
+# Build with version metadata baked in
+task build
 
-### Build Tools
+# Install to GOPATH/bin
+task install
 
-#### `warpgate_build`
+# Run the full test suite with race detector
+task test
 
-Build a container image or AMI using the warpgate CLI.
+# Coverage report (HTML)
+task test-coverage
 
-**Parameters:**
+# Lint and format
+task lint
+task fmt
 
-- `template` (string, required): Template name, config file path, or warpgate.yaml location
-- `target` (string, optional): Build target type ('container' or 'ami')
-- `architectures` (array, optional): Target architectures (['amd64', 'arm64'])
-- `push` (boolean, optional): Push image to registry after build
-- `registry` (string, optional): Container registry to push to
-- `vars` (object, optional): Variable overrides as key-value pairs
-- `tags` (array, optional): Additional tags to apply
-- `no_cache` (boolean, optional): Disable build caching
-- `save_digests` (boolean, optional): Save image digests to files
+# Run pre-commit hooks (matches CI)
+task run-pre-commit
 
-#### `warpgate_validate`
-
-Validate a warpgate template configuration.
-
-**Parameters:**
-
-- `template` (string, required): Path to warpgate.yaml or template directory
-- `syntax_only` (boolean, optional): Only validate syntax, skip file existence checks
-
-#### `warpgate_init`
-
-Initialize a new warpgate template with scaffolding.
-
-**Parameters:**
-
-- `name` (string, required): Name of the new template
-- `output` (string, optional): Output directory for the template
-- `from` (string, optional): Fork from an existing template
-
-### Template Tools
-
-#### `warpgate_templates_list`
-
-List all available templates from configured sources.
-
-**Parameters:**
-
-- `source` (string, optional): Filter by source ('all', 'local', 'git', or specific repo)
-- `format` (string, optional): Output format ('table', 'json', 'gha-matrix')
-
-#### `warpgate_templates_info`
-
-Get detailed information about a specific template.
-
-**Parameters:**
-
-- `template` (string, required): Template name
-
-#### `warpgate_templates_add`
-
-Add a template source to the registry.
-
-**Parameters:**
-
-- `source` (string, required): Git URL or local directory path
-- `name` (string, optional): Alias for the source
-
-#### `warpgate_templates_remove`
-
-Remove a template source from the registry.
-
-**Parameters:**
-
-- `name` (string, required): Source name or path to remove
-
-#### `create_template`
-
-Create a new warpgate template with warpgate.yaml configuration and scaffolding.
-
-**Parameters:**
-
-- `template_name` (string, required): Name of the new template
-- `description` (string, required): Brief description of what this template creates
-- `base_image` (string, optional): Base Docker image (default: 'ubuntu')
-- `base_image_version` (string, optional): Version of base image (default: '22.04')
-- `platforms` (array, optional): Target platforms (default: ['linux/amd64', 'linux/arm64'])
-- `include_ami` (boolean, optional): Include AWS AMI target configuration
-
-### Manifest Tools
-
-#### `warpgate_manifests_create`
-
-Create a multi-architecture manifest.
-
-**Parameters:**
-
-- `name` (string, required): Manifest name (e.g., 'registry/image:tag')
-- `images` (array, required): List of image references or digest files
-- `push` (boolean, optional): Push manifest after creation
-
-#### `warpgate_manifests_push`
-
-Push a manifest to the registry.
-
-**Parameters:**
-
-- `name` (string, required): Manifest name to push
-- `purge` (boolean, optional): Purge local manifest after pushing
-
-### Config Tools
-
-#### `warpgate_config_get`
-
-Get warpgate configuration values.
-
-**Parameters:**
-
-- `key` (string, optional): Configuration key (returns all if not specified)
-
-#### `warpgate_config_set`
-
-Set a warpgate configuration value.
-
-**Parameters:**
-
-- `key` (string, required): Configuration key
-- `value` (string, required): Value to set
-
-#### `warpgate_config_show`
-
-Show the current warpgate configuration.
-
-### Registry Tools
-
-#### `warpgate_registry_list`
-
-List available image tags in a container registry.
-
-**Parameters:**
-
-- `name` (string, required): Image name (e.g., attack-box, sliver)
-- `registry` (string, required): Container registry URL (e.g., ghcr.io/cowdogmoo)
-- `namespace` (string, optional): Namespace/organization within the registry
-- `auth_file` (string, optional): Path to authentication file
-
-#### `warpgate_registry_inspect`
-
-Inspect a container image manifest from a registry.
-
-**Parameters:**
-
-- `name` (string, required): Image name (e.g., attack-box, sliver)
-- `registry` (string, required): Container registry URL (e.g., ghcr.io/cowdogmoo)
-- `tags` (array, optional): Image tags to inspect (default: latest)
-- `namespace` (string, optional): Namespace/organization within the registry
-- `auth_file` (string, optional): Path to authentication file
-
-### Other Tools
-
-#### `warpgate_convert`
-
-Convert a Packer template to warpgate YAML format.
-
-**Parameters:**
-
-- `source` (string, required): Path to Packer template
-- `output` (string, optional): Output path for warpgate.yaml
-
-#### `warpgate_schema_validate`
-
-Validate a warpgate.yaml configuration file against the template schema.
-
-**Parameters:**
-
-- `config_path` (string, optional): Path to the warpgate.yaml file to validate
-- `template_dir` (string, optional): Path to a template directory containing warpgate.yaml
-
-## Common Workflows
-
-### Build a Container Image
-
-```text
-1. warpgate_templates_list - See available templates
-2. warpgate_templates_info - Get template details
-3. warpgate_validate - Validate the configuration
-4. warpgate_build - Build the image
+# Build a local Docker image
+task docker-build
 ```
 
-### Create a New Template
-
-```text
-1. warpgate_init - Create template scaffolding
-2. Edit warpgate.yaml to configure provisioning
-3. warpgate_validate - Check for errors
-4. warpgate_build - Build the image
-```
-
-### Multi-Architecture Build
-
-```text
-1. warpgate_build with architectures=['amd64'] --save-digests
-2. warpgate_build with architectures=['arm64'] --save-digests
-3. warpgate_manifests_create with both digests
-```
-
-### Migrate from Packer
-
-```text
-1. warpgate_convert - Convert Packer template to warpgate.yaml
-2. warpgate_validate - Validate the converted template
-3. warpgate_build - Build with new format
-```
-
-### Inspect Registry Images
-
-```text
-1. warpgate_registry_list - List available tags for an image
-2. warpgate_registry_inspect - Get manifest details and architectures
-```
-
-## MCP Resources
-
-The server provides access to these MCP resources:
-
-| Resource URI | Description |
-|--------------|-------------|
-| `warpgate://config` | Current warpgate CLI configuration |
-| `warpgate://cli-info` | CLI version and binary path information |
-| `warpgate://schema/template` | JSON schema for warpgate.yaml validation |
-| `warpgate://template/{name}/readme` | Template README documentation |
-| `warpgate://template/{name}/config` | Template warpgate.yaml configuration |
-
-## Environment Variables
-
-- `WARPGATE_*` - Warpgate CLI configuration overrides
-
-## Architecture
+### Project Layout
 
 ```text
 warpgate-mcp-server/
-├── cmd/
-│   └── warpgate-mcp-server/       # Main application
-│       ├── main.go                 # Entry point and server setup
-│       └── instructions.md         # MCP server instructions
+├── cmd/warpgate-mcp-server/   Entry point + embedded MCP instructions
 ├── pkg/
-│   ├── client/                     # Warpgate client
-│   │   ├── warpgate.go            # CLI detection and execution
-│   │   └── mock_client.go         # Mock client for testing
-│   ├── logging/                    # Logging utilities
-│   │   └── logging.go             # slog-based logger
-│   ├── resources/                  # MCP resources
-│   │   └── resources.go           # Config, CLI info, schema resources
-│   └── tools/                      # MCP tools
-│       ├── tools.go               # Tool registration
-│       ├── warpgate_build.go      # Build tool
-│       ├── warpgate_validate.go   # Validate tool
-│       ├── warpgate_init.go       # Init tool
-│       ├── warpgate_templates.go  # Template registry tools
-│       ├── warpgate_manifests.go  # Manifest tools
-│       ├── warpgate_config.go     # Config tools
-│       ├── warpgate_convert.go    # Convert tool
-│       ├── warpgate_registry.go   # Registry list/inspect tools
-│       ├── warpgate_schema.go     # Schema validation tool
-│       └── create_template.go     # Template creation tool
-├── version/
-│   └── version.go                  # Version information
-├── Dockerfile                      # Container image definition
-├── go.mod                          # Go module definition
-└── README.md                       # This file
+│   ├── client/                Warpgate CLI detection and execution
+│   ├── logging/               slog-based logger that respects MCP stdio
+│   ├── prompts/               Reusable prompt workflows
+│   ├── resources/             MCP resource handlers (config, schema, ...)
+│   └── tools/                 MCP tool handlers (build, registry, ...)
+├── version/                   Version metadata (set via ldflags)
+├── server.json                MCP registry descriptor
+├── Dockerfile                 Multi-stage container build
+└── Taskfile.yaml              Task runner for build/test/release
 ```
-
-## License
-
-MIT License - see the LICENSE file for details.
 
 ## Contributing
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, commit
+conventions, and the pull request workflow.
 
-## Support
+## Built With
 
-For issues and questions:
+- [mcp-go](https://github.com/mark3labs/mcp-go) — Go SDK for the Model Context Protocol
+- [Cobra](https://github.com/spf13/cobra) — CLI framework
+- [Warpgate](https://github.com/CowDogMoo/warpgate) — The CLI this server fronts
 
-- Open an issue on [GitHub](https://github.com/cowdogmoo/warpgate-mcp-server/issues)
-- Refer to the [Warpgate documentation](https://github.com/CowDogMoo/warpgate)
+## License
 
-## Related Projects
-
-- [Warpgate](https://github.com/CowDogMoo/warpgate) - The main Warpgate project
-- [MCP Go SDK](https://github.com/mark3labs/mcp-go) - Go SDK for Model Context Protocol
+[MIT](LICENSE) — see the LICENSE file for details.
