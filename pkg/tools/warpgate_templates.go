@@ -161,6 +161,78 @@ func warpgateTemplatesAdd(s *server.MCPServer, logger *logging.Logger, warpgateP
 	s.AddTool(tool, handler)
 }
 
+func warpgateTemplatesSearch(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
+	tool := mcp.Tool{
+		Name:        "warpgate_templates_search",
+		Description: "Search the warpgate template registry for templates whose name, description, or tags match a query.",
+		InputSchema: mcp.ToolInputSchema{
+			Type: "object",
+			Properties: map[string]interface{}{
+				"query": map[string]interface{}{
+					"type":        "string",
+					"description": "Search query (substring or keyword).",
+				},
+			},
+			Required: []string{"query"},
+		},
+	}
+
+	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		query := request.GetString("query", "")
+		if query == "" {
+			return mcp.NewToolResultError("query is required and must be a string"), nil
+		}
+
+		wg, err := client.NewWarpgateClient(warpgatePath)
+		if err != nil {
+			logger.Errorf("Failed to create Warpgate client: %v", err)
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to create Warpgate client: %v", err)), nil
+		}
+		if !wg.IsCLIAvailable() {
+			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 3.0.0"), nil
+		}
+
+		output, err := wg.WarpgateTemplatesSearch(ctx, query)
+		if err != nil {
+			logger.Errorf("Failed to search templates: %v", err)
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to search templates: %v\n%s", err, output)), nil
+		}
+		return mcp.NewToolResultText(output), nil
+	}
+
+	s.AddTool(tool, handler)
+}
+
+func warpgateTemplatesUpdate(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
+	tool := mcp.Tool{
+		Name:        "warpgate_templates_update",
+		Description: "Refresh the local template cache from every configured template repository.",
+		InputSchema: mcp.ToolInputSchema{
+			Type: "object",
+		},
+	}
+
+	handler := func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		wg, err := client.NewWarpgateClient(warpgatePath)
+		if err != nil {
+			logger.Errorf("Failed to create Warpgate client: %v", err)
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to create Warpgate client: %v", err)), nil
+		}
+		if !wg.IsCLIAvailable() {
+			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 3.0.0"), nil
+		}
+
+		output, err := wg.WarpgateTemplatesUpdate(ctx)
+		if err != nil {
+			logger.Errorf("Failed to update templates: %v", err)
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to update templates: %v\n%s", err, output)), nil
+		}
+		return mcp.NewToolResultText(output), nil
+	}
+
+	s.AddTool(tool, handler)
+}
+
 func warpgateTemplatesRemove(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
 	tool := mcp.Tool{
 		Name:        "warpgate_templates_remove",

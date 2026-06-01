@@ -21,6 +21,8 @@ func RegisterTools(s *server.MCPServer, logger *logging.Logger, warpgatePath str
 	warpgateTemplatesInfo(s, logger, warpgatePath)
 	warpgateTemplatesAdd(s, logger, warpgatePath)
 	warpgateTemplatesRemove(s, logger, warpgatePath)
+	warpgateTemplatesSearch(s, logger, warpgatePath)
+	warpgateTemplatesUpdate(s, logger, warpgatePath)
 
 	// Template creation
 	createTemplate(s, logger, warpgatePath)
@@ -32,6 +34,11 @@ func RegisterTools(s *server.MCPServer, logger *logging.Logger, warpgatePath str
 	warpgateConfigGet(s, logger, warpgatePath)
 	warpgateConfigSet(s, logger, warpgatePath)
 	warpgateConfigShow(s, logger, warpgatePath)
+	warpgateConfigInit(s, logger, warpgatePath)
+	warpgateConfigPath(s, logger, warpgatePath)
+
+	// Cloud resource cleanup
+	warpgateCleanup(s, logger, warpgatePath)
 
 	// Conversion tools
 	warpgateConvert(s, logger, warpgatePath)

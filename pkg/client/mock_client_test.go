@@ -422,6 +422,89 @@ func TestMockWarpgateClient_WarpgateValidateConfig(t *testing.T) {
 	}
 }
 
+func TestMockWarpgateClient_WarpgateTemplatesSearch(t *testing.T) {
+	mock := NewMockWarpgateClient()
+	mock.TemplatesSearchResponse = "attack-box\nattack-tools"
+	result, err := mock.WarpgateTemplatesSearch(context.Background(), "attack")
+	if err != nil {
+		t.Errorf("WarpgateTemplatesSearch error: %v", err)
+	}
+	if result != "attack-box\nattack-tools" {
+		t.Errorf("WarpgateTemplatesSearch result = %q, want match list", result)
+	}
+	if mock.LastTemplatesSearchQuery != "attack" {
+		t.Errorf("LastTemplatesSearchQuery = %q, want %q", mock.LastTemplatesSearchQuery, "attack")
+	}
+}
+
+func TestMockWarpgateClient_WarpgateTemplatesUpdate(t *testing.T) {
+	mock := NewMockWarpgateClient()
+	mock.TemplatesUpdateResponse = "updated 3 repositories"
+	result, err := mock.WarpgateTemplatesUpdate(context.Background())
+	if err != nil {
+		t.Errorf("WarpgateTemplatesUpdate error: %v", err)
+	}
+	if result != "updated 3 repositories" {
+		t.Errorf("WarpgateTemplatesUpdate result = %q", result)
+	}
+}
+
+func TestMockWarpgateClient_WarpgateConfigInit(t *testing.T) {
+	mock := NewMockWarpgateClient()
+	mock.ConfigInitResponse = "Created config at ~/.config/warpgate/config.yaml"
+	result, err := mock.WarpgateConfigInit(context.Background(), true)
+	if err != nil {
+		t.Errorf("WarpgateConfigInit error: %v", err)
+	}
+	if result == "" {
+		t.Error("WarpgateConfigInit should return non-empty result")
+	}
+	if !mock.LastConfigInitForce {
+		t.Error("LastConfigInitForce should be true")
+	}
+}
+
+func TestMockWarpgateClient_WarpgateConfigPath(t *testing.T) {
+	mock := NewMockWarpgateClient()
+	mock.ConfigPathResponse = "/home/user/.config/warpgate/config.yaml"
+	result, err := mock.WarpgateConfigPath(context.Background())
+	if err != nil {
+		t.Errorf("WarpgateConfigPath error: %v", err)
+	}
+	if result == "" {
+		t.Error("WarpgateConfigPath should return non-empty result")
+	}
+}
+
+func TestMockWarpgateClient_WarpgateCleanup(t *testing.T) {
+	mock := NewMockWarpgateClient()
+	mock.CleanupResponse = "would delete 5 resources"
+	opts := CleanupOptions{
+		BuildName:    "attack-box",
+		Region:       "us-west-2",
+		DryRun:       true,
+		Versions:     true,
+		KeepVersions: 5,
+		Yes:          true,
+	}
+	result, err := mock.WarpgateCleanup(context.Background(), opts)
+	if err != nil {
+		t.Errorf("WarpgateCleanup error: %v", err)
+	}
+	if result != "would delete 5 resources" {
+		t.Errorf("WarpgateCleanup result = %q", result)
+	}
+	if mock.LastCleanupOpts.BuildName != "attack-box" {
+		t.Errorf("LastCleanupOpts.BuildName = %q, want %q", mock.LastCleanupOpts.BuildName, "attack-box")
+	}
+	if mock.LastCleanupOpts.KeepVersions != 5 {
+		t.Errorf("LastCleanupOpts.KeepVersions = %d, want 5", mock.LastCleanupOpts.KeepVersions)
+	}
+	if !mock.LastCleanupOpts.Yes {
+		t.Error("LastCleanupOpts.Yes should be true")
+	}
+}
+
 func TestMockWarpgateClient_CLINotAvailable(t *testing.T) {
 	mock := NewMockWarpgateClient()
 	mock.CLIAvailable = false
