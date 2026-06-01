@@ -27,7 +27,7 @@ type WarpgateClientInterface interface {
 	WarpgateInit(ctx context.Context, name string, opts InitOptions) (string, error)
 
 	// Template operations
-	WarpgateTemplatesList(ctx context.Context, source, format string) (string, error)
+	WarpgateTemplatesList(ctx context.Context, source, format string, quiet bool) (string, error)
 	WarpgateTemplatesInfo(ctx context.Context, template string) (string, error)
 	WarpgateTemplatesAdd(ctx context.Context, source string, name string) (string, error)
 	WarpgateTemplatesRemove(ctx context.Context, nameOrPath string) (string, error)
@@ -43,7 +43,7 @@ type WarpgateClientInterface interface {
 	WarpgateConfigShow(ctx context.Context) (string, error)
 
 	// Conversion
-	WarpgateConvert(ctx context.Context, source, output string) (string, error)
+	WarpgateConvert(ctx context.Context, opts ConvertOptions) (string, error)
 	WarpgateValidateConfig(ctx context.Context, configPath string) (string, error)
 
 	// Registry operations
@@ -112,6 +112,7 @@ type MockWarpgateClient struct {
 	LastInitOptions           InitOptions
 	LastTemplatesListSource   string
 	LastTemplatesListFormat   string
+	LastTemplatesListQuiet    bool
 	LastTemplatesInfoTemplate string
 	LastTemplatesAddSource    string
 	LastTemplatesAddName      string
@@ -122,8 +123,7 @@ type MockWarpgateClient struct {
 	LastConfigGetKey          string
 	LastConfigSetKey          string
 	LastConfigSetValue        string
-	LastConvertSource         string
-	LastConvertOutput         string
+	LastConvertOpts           ConvertOptions
 	LastValidateConfigPath    string
 	LastRegistryDeleteOptions RegistryDeleteOptions
 	LastRegistryCopyOptions   RegistryCopyOptions
@@ -192,9 +192,10 @@ func (m *MockWarpgateClient) WarpgateInit(_ context.Context, name string, opts I
 }
 
 // WarpgateTemplatesList mocks the templates list command
-func (m *MockWarpgateClient) WarpgateTemplatesList(_ context.Context, source, format string) (string, error) {
+func (m *MockWarpgateClient) WarpgateTemplatesList(_ context.Context, source, format string, quiet bool) (string, error) {
 	m.LastTemplatesListSource = source
 	m.LastTemplatesListFormat = format
+	m.LastTemplatesListQuiet = quiet
 	return m.TemplatesListResponse, m.TemplatesListError
 }
 
@@ -254,9 +255,8 @@ func (m *MockWarpgateClient) WarpgateConfigShow(_ context.Context) (string, erro
 }
 
 // WarpgateConvert mocks the convert command
-func (m *MockWarpgateClient) WarpgateConvert(_ context.Context, source, output string) (string, error) {
-	m.LastConvertSource = source
-	m.LastConvertOutput = output
+func (m *MockWarpgateClient) WarpgateConvert(_ context.Context, opts ConvertOptions) (string, error) {
+	m.LastConvertOpts = opts
 	return m.ConvertResponse, m.ConvertError
 }
 

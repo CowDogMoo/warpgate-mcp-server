@@ -31,6 +31,10 @@ func warpgateTemplatesList(s *server.MCPServer, logger *logging.Logger, warpgate
 					"enum":        []string{"table", "json", "gha-matrix"},
 					"default":     "table",
 				},
+				"quiet": map[string]interface{}{
+					"type":        "boolean",
+					"description": "Suppress informational output (matches CLI --quiet/-q).",
+				},
 			},
 		},
 	}
@@ -48,8 +52,9 @@ func warpgateTemplatesList(s *server.MCPServer, logger *logging.Logger, warpgate
 
 		source := request.GetString("source", "")
 		format := request.GetString("format", "")
+		quiet := request.GetBool("quiet", false)
 
-		output, err := wg.WarpgateTemplatesList(ctx, source, format)
+		output, err := wg.WarpgateTemplatesList(ctx, source, format, quiet)
 		if err != nil {
 			logger.Errorf("Failed to list templates: %v", err)
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to list templates: %v\n%s", err, output)), nil

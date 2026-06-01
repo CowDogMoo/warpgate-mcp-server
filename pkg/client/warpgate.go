@@ -256,8 +256,68 @@ func (w *WarpgateClient) ExecuteCLIWithWorkdir(ctx context.Context, workdir stri
 	return string(output), nil
 }
 
-// WarpgateBuild executes the warpgate build command
+// WarpgateBuild executes the warpgate build command.
 func (w *WarpgateClient) WarpgateBuild(ctx context.Context, template string, opts BuildOptions) (string, error) {
+	return w.ExecuteCLI(ctx, buildArgs(template, opts)...)
+}
+
+// BuildOptions contains options for the warpgate build command.
+//
+// Fields mirror flags accepted by `warpgate build`. Many are target-specific
+// (AMI/Azure/Proxmox) and ignored by other targets; the CLI is responsible
+// for rejecting incompatible combinations.
+type BuildOptions struct {
+	Template      string
+	FromGit       string // load template from git URL
+	Target        string // container, ami, azure, proxmox
+	Architectures []string
+	Push          bool
+	PushDigest    bool // push by digest, no tag (mutually exclusive with Push)
+	Registry      string
+	Vars          map[string]string
+	VarFiles      []string // YAML var files
+	BuildArgs     []string // build args (key=value)
+	Tags          []string
+	NoCache       bool
+	SaveDigests   bool
+	DigestDir     string
+
+	// AMI / AWS
+	Region          string
+	InstanceType    string
+	Force           bool
+	Cleanup         bool
+	DryRun          bool
+	Regions         []string
+	ParallelRegions bool
+	CopyToRegions   []string
+	StreamLogs      bool
+	ShowEC2Status   bool
+	OutputManifest  string
+
+	// Azure
+	AzureSubscription string
+	AzureLocation     string
+	AzureResourceGrp  string
+	AzureGallery      string
+	AzureImageDef     string
+	AzureVMSize       string
+	AzureIdentityID   string
+	AzureTargetRegion []string
+	AzureSubnetID     string
+	AzureProxyVMSize  string
+
+	// Proxmox
+	ProxmoxEndpoint string
+	ProxmoxNode     string
+	ProxmoxStorage  string
+	ProxmoxPool     string
+}
+
+// buildArgs converts BuildOptions to the argv `warpgate build` expects. Kept
+// private and used by both WarpgateBuild and WarpgateBuildStreaming so the two
+// can't drift.
+func buildArgs(template string, opts BuildOptions) []string {
 	args := []string{"build"}
 
 	if opts.Template != "" {
@@ -265,57 +325,128 @@ func (w *WarpgateClient) WarpgateBuild(ctx context.Context, template string, opt
 	} else if template != "" {
 		args = append(args, template)
 	}
-
+	if opts.FromGit != "" {
+		args = append(args, "--from-git", opts.FromGit)
+	}
 	if opts.Target != "" {
 		args = append(args, "--target", opts.Target)
 	}
-
 	for _, arch := range opts.Architectures {
 		args = append(args, "--arch", arch)
 	}
-
 	if opts.Push {
 		args = append(args, "--push")
 	}
-
+	if opts.PushDigest {
+		args = append(args, "--push-digest")
+	}
 	if opts.Registry != "" {
 		args = append(args, "--registry", opts.Registry)
 	}
-
 	for key, value := range opts.Vars {
 		args = append(args, "--var", fmt.Sprintf("%s=%s", key, value))
 	}
-
+	for _, vf := range opts.VarFiles {
+		args = append(args, "--var-file", vf)
+	}
+	for _, ba := range opts.BuildArgs {
+		args = append(args, "--build-arg", ba)
+	}
 	for _, tag := range opts.Tags {
 		args = append(args, "--tag", tag)
 	}
-
 	if opts.NoCache {
 		args = append(args, "--no-cache")
 	}
-
 	if opts.SaveDigests {
 		args = append(args, "--save-digests")
-		if opts.DigestDir != "" {
-			args = append(args, "--digest-dir", opts.DigestDir)
-		}
+	}
+	if opts.DigestDir != "" {
+		args = append(args, "--digest-dir", opts.DigestDir)
 	}
 
-	return w.ExecuteCLI(ctx, args...)
-}
+	// AWS / AMI
+	if opts.Region != "" {
+		args = append(args, "--region", opts.Region)
+	}
+	if opts.InstanceType != "" {
+		args = append(args, "--instance-type", opts.InstanceType)
+	}
+	if opts.Force {
+		args = append(args, "--force")
+	}
+	if opts.Cleanup {
+		args = append(args, "--cleanup")
+	}
+	if opts.DryRun {
+		args = append(args, "--dry-run")
+	}
+	for _, r := range opts.Regions {
+		args = append(args, "--regions", r)
+	}
+	if opts.ParallelRegions {
+		args = append(args, "--parallel-regions")
+	}
+	for _, r := range opts.CopyToRegions {
+		args = append(args, "--copy-to-regions", r)
+	}
+	if opts.StreamLogs {
+		args = append(args, "--stream-logs")
+	}
+	if opts.ShowEC2Status {
+		args = append(args, "--show-ec2-status")
+	}
+	if opts.OutputManifest != "" {
+		args = append(args, "--output-manifest", opts.OutputManifest)
+	}
 
-// BuildOptions contains options for the warpgate build command
-type BuildOptions struct {
-	Template      string
-	Target        string   // container, ami
-	Architectures []string // amd64, arm64
-	Push          bool
-	Registry      string
-	Vars          map[string]string
-	Tags          []string
-	NoCache       bool
-	SaveDigests   bool
-	DigestDir     string
+	// Azure
+	if opts.AzureSubscription != "" {
+		args = append(args, "--subscription", opts.AzureSubscription)
+	}
+	if opts.AzureLocation != "" {
+		args = append(args, "--location", opts.AzureLocation)
+	}
+	if opts.AzureResourceGrp != "" {
+		args = append(args, "--resource-group", opts.AzureResourceGrp)
+	}
+	if opts.AzureGallery != "" {
+		args = append(args, "--gallery", opts.AzureGallery)
+	}
+	if opts.AzureImageDef != "" {
+		args = append(args, "--image-definition", opts.AzureImageDef)
+	}
+	if opts.AzureVMSize != "" {
+		args = append(args, "--vm-size", opts.AzureVMSize)
+	}
+	if opts.AzureIdentityID != "" {
+		args = append(args, "--identity-id", opts.AzureIdentityID)
+	}
+	for _, r := range opts.AzureTargetRegion {
+		args = append(args, "--target-regions", r)
+	}
+	if opts.AzureSubnetID != "" {
+		args = append(args, "--subnet-id", opts.AzureSubnetID)
+	}
+	if opts.AzureProxyVMSize != "" {
+		args = append(args, "--proxy-vm-size", opts.AzureProxyVMSize)
+	}
+
+	// Proxmox
+	if opts.ProxmoxEndpoint != "" {
+		args = append(args, "--proxmox-endpoint", opts.ProxmoxEndpoint)
+	}
+	if opts.ProxmoxNode != "" {
+		args = append(args, "--proxmox-node", opts.ProxmoxNode)
+	}
+	if opts.ProxmoxStorage != "" {
+		args = append(args, "--proxmox-storage", opts.ProxmoxStorage)
+	}
+	if opts.ProxmoxPool != "" {
+		args = append(args, "--proxmox-pool", opts.ProxmoxPool)
+	}
+
+	return args
 }
 
 // WarpgateValidate executes the warpgate validate command
@@ -359,7 +490,7 @@ type InitOptions struct {
 }
 
 // WarpgateTemplatesList lists templates from the registry
-func (w *WarpgateClient) WarpgateTemplatesList(ctx context.Context, source, format string) (string, error) {
+func (w *WarpgateClient) WarpgateTemplatesList(ctx context.Context, source, format string, quiet bool) (string, error) {
 	args := []string{"templates", "list"}
 
 	if source != "" {
@@ -368,6 +499,10 @@ func (w *WarpgateClient) WarpgateTemplatesList(ctx context.Context, source, form
 
 	if format != "" {
 		args = append(args, "--format", format)
+	}
+
+	if quiet {
+		args = append(args, "--quiet")
 	}
 
 	return w.ExecuteCLI(ctx, args...)
@@ -409,6 +544,26 @@ type ManifestsCreateOptions struct {
 	DigestDir string
 	DryRun    bool
 	Force     bool
+
+	// Verification & validation
+	VerifyRegistry    *bool // pointer because CLI default is true (use --verify-registry=false to disable)
+	VerifyConcurrency int
+	MaxAge            string // e.g. "1h", "30m"
+
+	// Architecture filtering
+	RequireArch []string
+	BestEffort  bool
+
+	// OCI metadata
+	Annotations []string // key=value
+	Labels      []string // key=value
+
+	// Behavior
+	HealthCheck bool
+	ShowDiff    bool
+	NoProgress  bool
+	Quiet       bool
+	Verbose     bool
 }
 
 // WarpgateManifestsCreate creates and pushes a multi-arch manifest from
@@ -434,11 +589,47 @@ func (w *WarpgateClient) WarpgateManifestsCreate(ctx context.Context, opts Manif
 	if opts.DigestDir != "" {
 		args = append(args, "--digest-dir", opts.DigestDir)
 	}
+	if opts.VerifyRegistry != nil {
+		args = append(args, fmt.Sprintf("--verify-registry=%t", *opts.VerifyRegistry))
+	}
+	if opts.VerifyConcurrency > 0 {
+		args = append(args, "--verify-concurrency", fmt.Sprintf("%d", opts.VerifyConcurrency))
+	}
+	if opts.MaxAge != "" {
+		args = append(args, "--max-age", opts.MaxAge)
+	}
+	for _, a := range opts.RequireArch {
+		args = append(args, "--require-arch", a)
+	}
+	if opts.BestEffort {
+		args = append(args, "--best-effort")
+	}
+	for _, a := range opts.Annotations {
+		args = append(args, "--annotation", a)
+	}
+	for _, l := range opts.Labels {
+		args = append(args, "--label", l)
+	}
+	if opts.HealthCheck {
+		args = append(args, "--health-check")
+	}
+	if opts.ShowDiff {
+		args = append(args, "--show-diff")
+	}
+	if opts.NoProgress {
+		args = append(args, "--no-progress")
+	}
 	if opts.DryRun {
 		args = append(args, "--dry-run")
 	}
 	if opts.Force {
 		args = append(args, "--force")
+	}
+	if opts.Quiet {
+		args = append(args, "--quiet")
+	}
+	if opts.Verbose {
+		args = append(args, "--verbose")
 	}
 
 	return w.ExecuteCLI(ctx, args...)
@@ -467,14 +658,45 @@ func (w *WarpgateClient) WarpgateConfigShow(ctx context.Context) (string, error)
 	return w.ExecuteCLI(ctx, args...)
 }
 
+// ConvertOptions contains options for `warpgate convert packer`.
+type ConvertOptions struct {
+	Source     string
+	Output     string
+	Author     string
+	License    string
+	Version    string
+	BaseImage  string
+	IncludeAMI *bool // pointer because CLI default is true (use --include-ami=false to disable)
+	DryRun     bool
+}
+
 // WarpgateConvert converts a Packer template to warpgate format
-func (w *WarpgateClient) WarpgateConvert(ctx context.Context, source, output string) (string, error) {
-	args := []string{"convert", "packer", source}
-
-	if output != "" {
-		args = append(args, "--output", output)
+func (w *WarpgateClient) WarpgateConvert(ctx context.Context, opts ConvertOptions) (string, error) {
+	args := []string{"convert", "packer"}
+	if opts.Source != "" {
+		args = append(args, opts.Source)
 	}
-
+	if opts.Output != "" {
+		args = append(args, "--output", opts.Output)
+	}
+	if opts.Author != "" {
+		args = append(args, "--author", opts.Author)
+	}
+	if opts.License != "" {
+		args = append(args, "--license", opts.License)
+	}
+	if opts.Version != "" {
+		args = append(args, "--version", opts.Version)
+	}
+	if opts.BaseImage != "" {
+		args = append(args, "--base-image", opts.BaseImage)
+	}
+	if opts.IncludeAMI != nil {
+		args = append(args, fmt.Sprintf("--include-ami=%t", *opts.IncludeAMI))
+	}
+	if opts.DryRun {
+		args = append(args, "--dry-run")
+	}
 	return w.ExecuteCLI(ctx, args...)
 }
 
@@ -664,50 +886,7 @@ func (w *WarpgateClient) ExecuteCLIStreaming(ctx context.Context, callback Outpu
 
 // WarpgateBuildStreaming executes the warpgate build command with streaming output
 func (w *WarpgateClient) WarpgateBuildStreaming(ctx context.Context, template string, opts BuildOptions, callback OutputCallback) (string, error) {
-	args := []string{"build"}
-
-	if opts.Template != "" {
-		args = append(args, "--template", opts.Template)
-	} else if template != "" {
-		args = append(args, template)
-	}
-
-	if opts.Target != "" {
-		args = append(args, "--target", opts.Target)
-	}
-
-	for _, arch := range opts.Architectures {
-		args = append(args, "--arch", arch)
-	}
-
-	if opts.Push {
-		args = append(args, "--push")
-	}
-
-	if opts.Registry != "" {
-		args = append(args, "--registry", opts.Registry)
-	}
-
-	for key, value := range opts.Vars {
-		args = append(args, "--var", fmt.Sprintf("%s=%s", key, value))
-	}
-
-	for _, tag := range opts.Tags {
-		args = append(args, "--tag", tag)
-	}
-
-	if opts.NoCache {
-		args = append(args, "--no-cache")
-	}
-
-	if opts.SaveDigests {
-		args = append(args, "--save-digests")
-		if opts.DigestDir != "" {
-			args = append(args, "--digest-dir", opts.DigestDir)
-		}
-	}
-
-	return w.ExecuteCLIStreaming(ctx, callback, args...)
+	return w.ExecuteCLIStreaming(ctx, callback, buildArgs(template, opts)...)
 }
 
 // RegistryDeleteOptions contains options for deleting images from a registry
