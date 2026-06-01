@@ -317,9 +317,20 @@ type BuildOptions struct {
 // buildArgs converts BuildOptions to the argv `warpgate build` expects. Kept
 // private and used by both WarpgateBuild and WarpgateBuildStreaming so the two
 // can't drift.
+//
+// Composed from per-target helpers to keep each function's cyclomatic
+// complexity tractable; the CLI surface is large.
 func buildArgs(template string, opts BuildOptions) []string {
 	args := []string{"build"}
+	args = appendCoreBuildArgs(args, template, opts)
+	args = appendAWSBuildArgs(args, opts)
+	args = appendAzureBuildArgs(args, opts)
+	args = appendProxmoxBuildArgs(args, opts)
+	return args
+}
 
+// appendCoreBuildArgs appends flags shared across all build targets.
+func appendCoreBuildArgs(args []string, template string, opts BuildOptions) []string {
 	if opts.Template != "" {
 		args = append(args, "--template", opts.Template)
 	} else if template != "" {
@@ -364,8 +375,11 @@ func buildArgs(template string, opts BuildOptions) []string {
 	if opts.DigestDir != "" {
 		args = append(args, "--digest-dir", opts.DigestDir)
 	}
+	return args
+}
 
-	// AWS / AMI
+// appendAWSBuildArgs appends AMI/AWS-specific build flags.
+func appendAWSBuildArgs(args []string, opts BuildOptions) []string {
 	if opts.Region != "" {
 		args = append(args, "--region", opts.Region)
 	}
@@ -399,8 +413,11 @@ func buildArgs(template string, opts BuildOptions) []string {
 	if opts.OutputManifest != "" {
 		args = append(args, "--output-manifest", opts.OutputManifest)
 	}
+	return args
+}
 
-	// Azure
+// appendAzureBuildArgs appends Azure Image Builder-specific flags.
+func appendAzureBuildArgs(args []string, opts BuildOptions) []string {
 	if opts.AzureSubscription != "" {
 		args = append(args, "--subscription", opts.AzureSubscription)
 	}
@@ -431,8 +448,11 @@ func buildArgs(template string, opts BuildOptions) []string {
 	if opts.AzureProxyVMSize != "" {
 		args = append(args, "--proxy-vm-size", opts.AzureProxyVMSize)
 	}
+	return args
+}
 
-	// Proxmox
+// appendProxmoxBuildArgs appends Proxmox-specific flags.
+func appendProxmoxBuildArgs(args []string, opts BuildOptions) []string {
 	if opts.ProxmoxEndpoint != "" {
 		args = append(args, "--proxmox-endpoint", opts.ProxmoxEndpoint)
 	}
@@ -445,7 +465,6 @@ func buildArgs(template string, opts BuildOptions) []string {
 	if opts.ProxmoxPool != "" {
 		args = append(args, "--proxmox-pool", opts.ProxmoxPool)
 	}
-
 	return args
 }
 
