@@ -46,7 +46,7 @@ func templateReadmeResource(s *server.MCPServer, logger *logging.Logger, warpgat
 				mcp.TextResourceContents{
 					URI:      "warpgate://template/{name}/readme",
 					MIMEType: "text/markdown",
-					Text:     "Warpgate CLI is not available. Please install warpgate >= 1.0.0 to list templates.",
+					Text:     "Warpgate CLI is not available. Please install warpgate >= 3.0.0 to list templates.",
 				},
 			}, nil
 		}
@@ -95,7 +95,7 @@ func templateConfigResource(s *server.MCPServer, logger *logging.Logger, warpgat
 				mcp.TextResourceContents{
 					URI:      "warpgate://template/{name}/config",
 					MIMEType: "text/yaml",
-					Text:     "Warpgate CLI is not available. Please install warpgate >= 1.0.0 to access template configs.",
+					Text:     "Warpgate CLI is not available. Please install warpgate >= 3.0.0 to access template configs.",
 				},
 			}, nil
 		}
@@ -158,7 +158,7 @@ func warpgateConfigResource(s *server.MCPServer, logger *logging.Logger, warpgat
 				mcp.TextResourceContents{
 					URI:      "warpgate://config",
 					MIMEType: "text/plain",
-					Text:     "Warpgate CLI is not available. Please install warpgate >= 1.0.0",
+					Text:     "Warpgate CLI is not available. Please install warpgate >= 3.0.0",
 				},
 			}, nil
 		}

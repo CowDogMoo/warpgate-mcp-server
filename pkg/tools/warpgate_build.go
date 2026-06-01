@@ -88,7 +88,7 @@ func warpgateBuild(s *server.MCPServer, logger *logging.Logger, warpgatePath str
 		}
 
 		if !wg.IsCLIAvailable() {
-			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 1.0.0"), nil
+			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 3.0.0"), nil
 		}
 
 		// Build options

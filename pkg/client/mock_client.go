@@ -33,8 +33,7 @@ type WarpgateClientInterface interface {
 	WarpgateTemplatesRemove(ctx context.Context, nameOrPath string) (string, error)
 
 	// Manifest operations
-	WarpgateManifestsCreate(ctx context.Context, name string, images []string, push bool) (string, error)
-	WarpgateManifestsPush(ctx context.Context, name string, purge bool) (string, error)
+	WarpgateManifestsCreate(ctx context.Context, opts ManifestsCreateOptions) (string, error)
 	WarpgateManifestsList(ctx context.Context, opts ManifestsListOptions) (string, error)
 	WarpgateManifestsInspect(ctx context.Context, opts ManifestsInspectOptions) (string, error)
 
@@ -84,8 +83,6 @@ type MockWarpgateClient struct {
 	TemplatesRemoveError     error
 	ManifestsCreateResponse  string
 	ManifestsCreateError     error
-	ManifestsPushResponse    string
-	ManifestsPushError       error
 	ManifestsListResponse    string
 	ManifestsListError       error
 	ManifestsInspectResponse string
@@ -119,11 +116,7 @@ type MockWarpgateClient struct {
 	LastTemplatesAddSource    string
 	LastTemplatesAddName      string
 	LastTemplatesRemoveName   string
-	LastManifestsCreateName   string
-	LastManifestsCreateImages []string
-	LastManifestsCreatePush   bool
-	LastManifestsPushName     string
-	LastManifestsPushPurge    bool
+	LastManifestsCreateOpts   ManifestsCreateOptions
 	LastManifestsListOptions  ManifestsListOptions
 	LastManifestsInspectOpts  ManifestsInspectOptions
 	LastConfigGetKey          string
@@ -225,18 +218,9 @@ func (m *MockWarpgateClient) WarpgateTemplatesRemove(_ context.Context, nameOrPa
 }
 
 // WarpgateManifestsCreate mocks the manifests create command
-func (m *MockWarpgateClient) WarpgateManifestsCreate(_ context.Context, name string, images []string, push bool) (string, error) {
-	m.LastManifestsCreateName = name
-	m.LastManifestsCreateImages = images
-	m.LastManifestsCreatePush = push
+func (m *MockWarpgateClient) WarpgateManifestsCreate(_ context.Context, opts ManifestsCreateOptions) (string, error) {
+	m.LastManifestsCreateOpts = opts
 	return m.ManifestsCreateResponse, m.ManifestsCreateError
-}
-
-// WarpgateManifestsPush mocks the manifests push command
-func (m *MockWarpgateClient) WarpgateManifestsPush(_ context.Context, name string, purge bool) (string, error) {
-	m.LastManifestsPushName = name
-	m.LastManifestsPushPurge = purge
-	return m.ManifestsPushResponse, m.ManifestsPushError
 }
 
 // WarpgateManifestsList mocks the manifests list command

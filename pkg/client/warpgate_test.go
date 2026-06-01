@@ -68,8 +68,8 @@ func TestIsVersionCompatible(t *testing.T) {
 
 func TestMinimumWarpgateVersion(t *testing.T) {
 	// Verify the constant is set correctly
-	if MinimumWarpgateVersion != "1.0.0" {
-		t.Errorf("MinimumWarpgateVersion = %q, want %q", MinimumWarpgateVersion, "1.0.0")
+	if MinimumWarpgateVersion != "3.0.0" {
+		t.Errorf("MinimumWarpgateVersion = %q, want %q", MinimumWarpgateVersion, "3.0.0")
 	}
 }
 
@@ -289,20 +289,12 @@ func TestWarpgateManifestsCreateNotAvailable(t *testing.T) {
 		cliDetected: false,
 	}
 
-	_, err := client.WarpgateManifestsCreate(context.Background(), "test-manifest", []string{"img1", "img2"}, true)
+	_, err := client.WarpgateManifestsCreate(context.Background(), ManifestsCreateOptions{
+		Name:     "test-manifest",
+		Registry: "ghcr.io/test",
+	})
 	if err == nil {
 		t.Error("WarpgateManifestsCreate should fail when CLI is not available")
-	}
-}
-
-func TestWarpgateManifestsPushNotAvailable(t *testing.T) {
-	client := &WarpgateClient{
-		cliDetected: false,
-	}
-
-	_, err := client.WarpgateManifestsPush(context.Background(), "test-manifest", true)
-	if err == nil {
-		t.Error("WarpgateManifestsPush should fail when CLI is not available")
 	}
 }
 

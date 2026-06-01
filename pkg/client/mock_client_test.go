@@ -220,8 +220,13 @@ func TestMockWarpgateClient_WarpgateManifestsCreate(t *testing.T) {
 	mock := NewMockWarpgateClient()
 	mock.ManifestsCreateResponse = "Manifest created"
 
-	images := []string{"img:amd64", "img:arm64"}
-	result, err := mock.WarpgateManifestsCreate(context.Background(), "my-manifest", images, true)
+	opts := ManifestsCreateOptions{
+		Name:     "my-manifest",
+		Registry: "ghcr.io/cowdogmoo",
+		Tags:     []string{"latest", "v1.0.0"},
+		DryRun:   true,
+	}
+	result, err := mock.WarpgateManifestsCreate(context.Background(), opts)
 	if err != nil {
 		t.Errorf("WarpgateManifestsCreate returned unexpected error: %v", err)
 	}
@@ -230,38 +235,20 @@ func TestMockWarpgateClient_WarpgateManifestsCreate(t *testing.T) {
 		t.Errorf("WarpgateManifestsCreate() = %q, want %q", result, "Manifest created")
 	}
 
-	if mock.LastManifestsCreateName != "my-manifest" {
-		t.Errorf("LastManifestsCreateName = %q, want %q", mock.LastManifestsCreateName, "my-manifest")
+	if mock.LastManifestsCreateOpts.Name != "my-manifest" {
+		t.Errorf("LastManifestsCreateOpts.Name = %q, want %q", mock.LastManifestsCreateOpts.Name, "my-manifest")
 	}
 
-	if len(mock.LastManifestsCreateImages) != 2 {
-		t.Errorf("LastManifestsCreateImages length = %d, want 2", len(mock.LastManifestsCreateImages))
+	if mock.LastManifestsCreateOpts.Registry != "ghcr.io/cowdogmoo" {
+		t.Errorf("LastManifestsCreateOpts.Registry = %q, want %q", mock.LastManifestsCreateOpts.Registry, "ghcr.io/cowdogmoo")
 	}
 
-	if !mock.LastManifestsCreatePush {
-		t.Error("LastManifestsCreatePush should be true")
-	}
-}
-
-func TestMockWarpgateClient_WarpgateManifestsPush(t *testing.T) {
-	mock := NewMockWarpgateClient()
-	mock.ManifestsPushResponse = "Manifest pushed"
-
-	result, err := mock.WarpgateManifestsPush(context.Background(), "my-manifest", true)
-	if err != nil {
-		t.Errorf("WarpgateManifestsPush returned unexpected error: %v", err)
+	if len(mock.LastManifestsCreateOpts.Tags) != 2 {
+		t.Errorf("LastManifestsCreateOpts.Tags length = %d, want 2", len(mock.LastManifestsCreateOpts.Tags))
 	}
 
-	if result != "Manifest pushed" {
-		t.Errorf("WarpgateManifestsPush() = %q, want %q", result, "Manifest pushed")
-	}
-
-	if mock.LastManifestsPushName != "my-manifest" {
-		t.Errorf("LastManifestsPushName = %q, want %q", mock.LastManifestsPushName, "my-manifest")
-	}
-
-	if !mock.LastManifestsPushPurge {
-		t.Error("LastManifestsPushPurge should be true")
+	if !mock.LastManifestsCreateOpts.DryRun {
+		t.Error("LastManifestsCreateOpts.DryRun should be true")
 	}
 }
 
