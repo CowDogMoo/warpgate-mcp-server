@@ -52,7 +52,7 @@ func templateReadmeResource(s *server.MCPServer, logger *logging.Logger, warpgat
 		}
 
 		// Use warpgate CLI to list templates
-		templatesOutput, err := wg.WarpgateTemplatesList(ctx, "", "table")
+		templatesOutput, err := wg.WarpgateTemplatesList(ctx, "", "table", false)
 		if err != nil {
 			logger.Errorf("Failed to list templates: %v", err)
 			return nil, fmt.Errorf("failed to list templates: %w", err)

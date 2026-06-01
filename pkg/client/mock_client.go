@@ -27,10 +27,12 @@ type WarpgateClientInterface interface {
 	WarpgateInit(ctx context.Context, name string, opts InitOptions) (string, error)
 
 	// Template operations
-	WarpgateTemplatesList(ctx context.Context, source, format string) (string, error)
+	WarpgateTemplatesList(ctx context.Context, source, format string, quiet bool) (string, error)
 	WarpgateTemplatesInfo(ctx context.Context, template string) (string, error)
 	WarpgateTemplatesAdd(ctx context.Context, source string, name string) (string, error)
 	WarpgateTemplatesRemove(ctx context.Context, nameOrPath string) (string, error)
+	WarpgateTemplatesSearch(ctx context.Context, query string) (string, error)
+	WarpgateTemplatesUpdate(ctx context.Context) (string, error)
 
 	// Manifest operations
 	WarpgateManifestsCreate(ctx context.Context, opts ManifestsCreateOptions) (string, error)
@@ -41,9 +43,14 @@ type WarpgateClientInterface interface {
 	WarpgateConfigGet(ctx context.Context, key string) (string, error)
 	WarpgateConfigSet(ctx context.Context, key, value string) (string, error)
 	WarpgateConfigShow(ctx context.Context) (string, error)
+	WarpgateConfigInit(ctx context.Context, force bool) (string, error)
+	WarpgateConfigPath(ctx context.Context) (string, error)
+
+	// Resource cleanup
+	WarpgateCleanup(ctx context.Context, opts CleanupOptions) (string, error)
 
 	// Conversion
-	WarpgateConvert(ctx context.Context, source, output string) (string, error)
+	WarpgateConvert(ctx context.Context, opts ConvertOptions) (string, error)
 	WarpgateValidateConfig(ctx context.Context, configPath string) (string, error)
 
 	// Registry operations
@@ -93,6 +100,16 @@ type MockWarpgateClient struct {
 	ConfigSetError           error
 	ConfigShowResponse       string
 	ConfigShowError          error
+	ConfigInitResponse       string
+	ConfigInitError          error
+	ConfigPathResponse       string
+	ConfigPathError          error
+	TemplatesSearchResponse  string
+	TemplatesSearchError     error
+	TemplatesUpdateResponse  string
+	TemplatesUpdateError     error
+	CleanupResponse          string
+	CleanupError             error
 	ConvertResponse          string
 	ConvertError             error
 	ValidateConfigResponse   string
@@ -112,6 +129,7 @@ type MockWarpgateClient struct {
 	LastInitOptions           InitOptions
 	LastTemplatesListSource   string
 	LastTemplatesListFormat   string
+	LastTemplatesListQuiet    bool
 	LastTemplatesInfoTemplate string
 	LastTemplatesAddSource    string
 	LastTemplatesAddName      string
@@ -122,8 +140,10 @@ type MockWarpgateClient struct {
 	LastConfigGetKey          string
 	LastConfigSetKey          string
 	LastConfigSetValue        string
-	LastConvertSource         string
-	LastConvertOutput         string
+	LastConfigInitForce       bool
+	LastTemplatesSearchQuery  string
+	LastCleanupOpts           CleanupOptions
+	LastConvertOpts           ConvertOptions
 	LastValidateConfigPath    string
 	LastRegistryDeleteOptions RegistryDeleteOptions
 	LastRegistryCopyOptions   RegistryCopyOptions
@@ -192,9 +212,10 @@ func (m *MockWarpgateClient) WarpgateInit(_ context.Context, name string, opts I
 }
 
 // WarpgateTemplatesList mocks the templates list command
-func (m *MockWarpgateClient) WarpgateTemplatesList(_ context.Context, source, format string) (string, error) {
+func (m *MockWarpgateClient) WarpgateTemplatesList(_ context.Context, source, format string, quiet bool) (string, error) {
 	m.LastTemplatesListSource = source
 	m.LastTemplatesListFormat = format
+	m.LastTemplatesListQuiet = quiet
 	return m.TemplatesListResponse, m.TemplatesListError
 }
 
@@ -253,10 +274,37 @@ func (m *MockWarpgateClient) WarpgateConfigShow(_ context.Context) (string, erro
 	return m.ConfigShowResponse, m.ConfigShowError
 }
 
+// WarpgateConfigInit mocks the config init command
+func (m *MockWarpgateClient) WarpgateConfigInit(_ context.Context, force bool) (string, error) {
+	m.LastConfigInitForce = force
+	return m.ConfigInitResponse, m.ConfigInitError
+}
+
+// WarpgateConfigPath mocks the config path command
+func (m *MockWarpgateClient) WarpgateConfigPath(_ context.Context) (string, error) {
+	return m.ConfigPathResponse, m.ConfigPathError
+}
+
+// WarpgateTemplatesSearch mocks the templates search command
+func (m *MockWarpgateClient) WarpgateTemplatesSearch(_ context.Context, query string) (string, error) {
+	m.LastTemplatesSearchQuery = query
+	return m.TemplatesSearchResponse, m.TemplatesSearchError
+}
+
+// WarpgateTemplatesUpdate mocks the templates update command
+func (m *MockWarpgateClient) WarpgateTemplatesUpdate(_ context.Context) (string, error) {
+	return m.TemplatesUpdateResponse, m.TemplatesUpdateError
+}
+
+// WarpgateCleanup mocks the cleanup command
+func (m *MockWarpgateClient) WarpgateCleanup(_ context.Context, opts CleanupOptions) (string, error) {
+	m.LastCleanupOpts = opts
+	return m.CleanupResponse, m.CleanupError
+}
+
 // WarpgateConvert mocks the convert command
-func (m *MockWarpgateClient) WarpgateConvert(_ context.Context, source, output string) (string, error) {
-	m.LastConvertSource = source
-	m.LastConvertOutput = output
+func (m *MockWarpgateClient) WarpgateConvert(_ context.Context, opts ConvertOptions) (string, error) {
+	m.LastConvertOpts = opts
 	return m.ConvertResponse, m.ConvertError
 }
 

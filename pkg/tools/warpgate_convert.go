@@ -26,7 +26,31 @@ func warpgateConvert(s *server.MCPServer, logger *logging.Logger, warpgatePath s
 				},
 				"output": map[string]interface{}{
 					"type":        "string",
-					"description": "Output path for the generated warpgate.yaml (default: stdout or source directory)",
+					"description": "Output path for the generated warpgate.yaml (default: <template-dir>/warpgate.yaml)",
+				},
+				"author": map[string]interface{}{
+					"type":        "string",
+					"description": "Template author to record in the generated metadata.",
+				},
+				"license": map[string]interface{}{
+					"type":        "string",
+					"description": "Template license (defaults to value from warpgate config).",
+				},
+				"version": map[string]interface{}{
+					"type":        "string",
+					"description": "Template version (defaults to value from warpgate config).",
+				},
+				"base_image": map[string]interface{}{
+					"type":        "string",
+					"description": "Override the base image instead of extracting it from the source Packer template.",
+				},
+				"include_ami": map[string]interface{}{
+					"type":        "boolean",
+					"description": "Include AMI target configuration in the generated YAML. Defaults to true; set false to skip the AMI target.",
+				},
+				"dry_run": map[string]interface{}{
+					"type":        "boolean",
+					"description": "Print converted YAML to stdout without writing the output file.",
 				},
 			},
 			Required: []string{"source"},
@@ -49,9 +73,25 @@ func warpgateConvert(s *server.MCPServer, logger *logging.Logger, warpgatePath s
 			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 3.0.0"), nil
 		}
 
-		output := request.GetString("output", "")
+		opts := client.ConvertOptions{
+			Source:    source,
+			Output:    request.GetString("output", ""),
+			Author:    request.GetString("author", ""),
+			License:   request.GetString("license", ""),
+			Version:   request.GetString("version", ""),
+			BaseImage: request.GetString("base_image", ""),
+			DryRun:    request.GetBool("dry_run", false),
+		}
+		// include_ami is tri-state: unset (CLI default true), explicitly true, explicitly false.
+		// Only override if the caller passed the field.
+		args := request.GetArguments()
+		if raw, ok := args["include_ami"]; ok {
+			if b, ok := raw.(bool); ok {
+				opts.IncludeAMI = &b
+			}
+		}
 
-		result, err := wg.WarpgateConvert(ctx, source, output)
+		result, err := wg.WarpgateConvert(ctx, opts)
 		if err != nil {
 			logger.Errorf("Failed to convert template: %v", err)
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to convert template: %v\n%s", err, result)), nil

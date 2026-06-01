@@ -55,6 +55,57 @@ func warpgateManifestsCreate(s *server.MCPServer, logger *logging.Logger, warpga
 					"type":        "boolean",
 					"description": "Force recreation even if the manifest already exists in the registry.",
 				},
+				"verify_registry": map[string]interface{}{
+					"type":        "boolean",
+					"description": "Verify the digests exist in the registry before assembling the manifest. CLI default is true; set false to skip verification.",
+				},
+				"verify_concurrency": map[string]interface{}{
+					"type":        "integer",
+					"description": "Concurrent digest-verification requests. CLI default is 5; max 20.",
+				},
+				"max_age": map[string]interface{}{
+					"type":        "string",
+					"description": "Reject digest files older than this duration (e.g. '1h', '30m').",
+				},
+				"require_arch": map[string]interface{}{
+					"type":        "array",
+					"description": "Architectures that must be present in the assembled manifest (e.g. ['amd64', 'arm64']).",
+					"items":       map[string]interface{}{"type": "string"},
+				},
+				"best_effort": map[string]interface{}{
+					"type":        "boolean",
+					"description": "Build the manifest with whatever architectures are available rather than failing when one is missing.",
+				},
+				"annotations": map[string]interface{}{
+					"type":        "array",
+					"description": "OCI annotations to apply, as 'key=value' strings.",
+					"items":       map[string]interface{}{"type": "string"},
+				},
+				"labels": map[string]interface{}{
+					"type":        "array",
+					"description": "OCI labels to apply, as 'key=value' strings.",
+					"items":       map[string]interface{}{"type": "string"},
+				},
+				"health_check": map[string]interface{}{
+					"type":        "boolean",
+					"description": "Perform a registry health check before assembling.",
+				},
+				"show_diff": map[string]interface{}{
+					"type":        "boolean",
+					"description": "If a manifest with the same name already exists, show a comparison/diff.",
+				},
+				"no_progress": map[string]interface{}{
+					"type":        "boolean",
+					"description": "Disable progress indicators.",
+				},
+				"quiet": map[string]interface{}{
+					"type":        "boolean",
+					"description": "Suppress informational output; only emit errors.",
+				},
+				"verbose": map[string]interface{}{
+					"type":        "boolean",
+					"description": "Verbose output with detailed progress.",
+				},
 			},
 			Required: []string{"name", "registry"},
 		},
@@ -81,14 +132,32 @@ func warpgateManifestsCreate(s *server.MCPServer, logger *logging.Logger, warpga
 		}
 
 		opts := client.ManifestsCreateOptions{
-			Name:      name,
-			Registry:  registry,
-			Namespace: request.GetString("namespace", ""),
-			AuthFile:  request.GetString("auth_file", ""),
-			Tags:      request.GetStringSlice("tags", nil),
-			DigestDir: request.GetString("digest_dir", ""),
-			DryRun:    request.GetBool("dry_run", false),
-			Force:     request.GetBool("force", false),
+			Name:              name,
+			Registry:          registry,
+			Namespace:         request.GetString("namespace", ""),
+			AuthFile:          request.GetString("auth_file", ""),
+			Tags:              request.GetStringSlice("tags", nil),
+			DigestDir:         request.GetString("digest_dir", ""),
+			DryRun:            request.GetBool("dry_run", false),
+			Force:             request.GetBool("force", false),
+			VerifyConcurrency: request.GetInt("verify_concurrency", 0),
+			MaxAge:            request.GetString("max_age", ""),
+			RequireArch:       request.GetStringSlice("require_arch", nil),
+			BestEffort:        request.GetBool("best_effort", false),
+			Annotations:       request.GetStringSlice("annotations", nil),
+			Labels:            request.GetStringSlice("labels", nil),
+			HealthCheck:       request.GetBool("health_check", false),
+			ShowDiff:          request.GetBool("show_diff", false),
+			NoProgress:        request.GetBool("no_progress", false),
+			Quiet:             request.GetBool("quiet", false),
+			Verbose:           request.GetBool("verbose", false),
+		}
+		// verify_registry is tri-state (CLI default true). Only set if caller passed it.
+		rawArgs := request.GetArguments()
+		if raw, ok := rawArgs["verify_registry"]; ok {
+			if b, ok := raw.(bool); ok {
+				opts.VerifyRegistry = &b
+			}
 		}
 
 		output, err := wg.WarpgateManifestsCreate(ctx, opts)

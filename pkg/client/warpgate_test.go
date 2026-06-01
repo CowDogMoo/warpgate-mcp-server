@@ -6,6 +6,7 @@ package client
 import (
 	"context"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -112,6 +113,107 @@ func TestBuildOptions(t *testing.T) {
 	}
 	if len(opts.Architectures) != 2 {
 		t.Errorf("BuildOptions.Architectures length = %d, want 2", len(opts.Architectures))
+	}
+}
+
+func TestBuildArgs(t *testing.T) {
+	// buildArgs converts BuildOptions to the argv warpgate expects. With 30+
+	// optional fields it's easy to forget a passthrough — assert each block's
+	// representative flags so silent omissions get caught.
+	opts := BuildOptions{
+		Template:      "attack-box",
+		FromGit:       "https://example.com/repo.git",
+		Target:        "ami",
+		Architectures: []string{"amd64", "arm64"},
+		Push:          true,
+		PushDigest:    true,
+		Registry:      "ghcr.io/test",
+		Vars:          map[string]string{"key": "value"},
+		VarFiles:      []string{"vars.yaml"},
+		BuildArgs:     []string{"FOO=bar"},
+		Tags:          []string{"latest"},
+		NoCache:       true,
+		SaveDigests:   true,
+		DigestDir:     "/tmp/digests",
+
+		Region:          "us-west-2",
+		InstanceType:    "t3.large",
+		Force:           true,
+		Cleanup:         true,
+		DryRun:          true,
+		Regions:         []string{"us-west-2", "us-east-1"},
+		ParallelRegions: true,
+		CopyToRegions:   []string{"eu-west-1"},
+		StreamLogs:      true,
+		ShowEC2Status:   true,
+		OutputManifest:  "manifest.json",
+
+		AzureSubscription: "sub-123",
+		AzureLocation:     "eastus",
+		AzureResourceGrp:  "rg-build",
+		AzureGallery:      "gallery",
+		AzureImageDef:     "imgdef",
+		AzureVMSize:       "Standard_D2s_v5",
+		AzureIdentityID:   "/subscriptions/.../identities/build",
+		AzureTargetRegion: []string{"westus", "northeurope"},
+		AzureSubnetID:     "/subnet/id",
+		AzureProxyVMSize:  "Standard_B1s",
+
+		ProxmoxEndpoint: "https://proxmox.example:8006",
+		ProxmoxNode:     "pve01",
+		ProxmoxStorage:  "local-lvm",
+		ProxmoxPool:     "build-pool",
+	}
+
+	args := buildArgs("", opts)
+	joined := strings.Join(args, " ")
+
+	wantFlags := []string{
+		"build",
+		"--template attack-box",
+		"--from-git https://example.com/repo.git",
+		"--target ami",
+		"--arch amd64", "--arch arm64",
+		"--push",
+		"--push-digest",
+		"--registry ghcr.io/test",
+		"--var key=value",
+		"--var-file vars.yaml",
+		"--build-arg FOO=bar",
+		"--tag latest",
+		"--no-cache",
+		"--save-digests",
+		"--digest-dir /tmp/digests",
+		"--region us-west-2",
+		"--instance-type t3.large",
+		"--force",
+		"--cleanup",
+		"--dry-run",
+		"--regions us-west-2", "--regions us-east-1",
+		"--parallel-regions",
+		"--copy-to-regions eu-west-1",
+		"--stream-logs",
+		"--show-ec2-status",
+		"--output-manifest manifest.json",
+		"--subscription sub-123",
+		"--location eastus",
+		"--resource-group rg-build",
+		"--gallery gallery",
+		"--image-definition imgdef",
+		"--vm-size Standard_D2s_v5",
+		"--identity-id /subscriptions/.../identities/build",
+		"--target-regions westus", "--target-regions northeurope",
+		"--subnet-id /subnet/id",
+		"--proxy-vm-size Standard_B1s",
+		"--proxmox-endpoint https://proxmox.example:8006",
+		"--proxmox-node pve01",
+		"--proxmox-storage local-lvm",
+		"--proxmox-pool build-pool",
+	}
+	for _, f := range wantFlags {
+		if !strings.Contains(joined, f) {
+			t.Errorf("buildArgs missing %q in: %s", f, joined)
+		}
 	}
 }
 
@@ -245,7 +347,7 @@ func TestWarpgateTemplatesListNotAvailable(t *testing.T) {
 		cliDetected: false,
 	}
 
-	_, err := client.WarpgateTemplatesList(context.Background(), "local", "json")
+	_, err := client.WarpgateTemplatesList(context.Background(), "local", "json", false)
 	if err == nil {
 		t.Error("WarpgateTemplatesList should fail when CLI is not available")
 	}
@@ -336,9 +438,47 @@ func TestWarpgateConvertNotAvailable(t *testing.T) {
 		cliDetected: false,
 	}
 
-	_, err := client.WarpgateConvert(context.Background(), "/path/to/source", "/path/to/output")
+	_, err := client.WarpgateConvert(context.Background(), ConvertOptions{
+		Source: "/path/to/source",
+		Output: "/path/to/output",
+	})
 	if err == nil {
 		t.Error("WarpgateConvert should fail when CLI is not available")
+	}
+}
+
+func TestWarpgateTemplatesSearchNotAvailable(t *testing.T) {
+	c := &WarpgateClient{cliDetected: false}
+	if _, err := c.WarpgateTemplatesSearch(context.Background(), "attack"); err == nil {
+		t.Error("WarpgateTemplatesSearch should fail when CLI is not available")
+	}
+}
+
+func TestWarpgateTemplatesUpdateNotAvailable(t *testing.T) {
+	c := &WarpgateClient{cliDetected: false}
+	if _, err := c.WarpgateTemplatesUpdate(context.Background()); err == nil {
+		t.Error("WarpgateTemplatesUpdate should fail when CLI is not available")
+	}
+}
+
+func TestWarpgateConfigInitNotAvailable(t *testing.T) {
+	c := &WarpgateClient{cliDetected: false}
+	if _, err := c.WarpgateConfigInit(context.Background(), false); err == nil {
+		t.Error("WarpgateConfigInit should fail when CLI is not available")
+	}
+}
+
+func TestWarpgateConfigPathNotAvailable(t *testing.T) {
+	c := &WarpgateClient{cliDetected: false}
+	if _, err := c.WarpgateConfigPath(context.Background()); err == nil {
+		t.Error("WarpgateConfigPath should fail when CLI is not available")
+	}
+}
+
+func TestWarpgateCleanupNotAvailable(t *testing.T) {
+	c := &WarpgateClient{cliDetected: false}
+	if _, err := c.WarpgateCleanup(context.Background(), CleanupOptions{DryRun: true}); err == nil {
+		t.Error("WarpgateCleanup should fail when CLI is not available")
 	}
 }
 
