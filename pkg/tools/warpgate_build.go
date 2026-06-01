@@ -68,6 +68,21 @@ func buildToolProperties() map[string]interface{} {
 			"description": "Additional tags to apply to the image.",
 			"items":       map[string]interface{}{"type": "string"},
 		},
+		"labels": map[string]interface{}{
+			"type":        "array",
+			"description": "Image labels (OCI), as 'key=value' strings.",
+			"items":       map[string]interface{}{"type": "string"},
+		},
+		"cache_from": map[string]interface{}{
+			"type":        "array",
+			"description": "External BuildKit cache sources (e.g. 'type=registry,ref=user/app:cache'). Container builds only.",
+			"items":       map[string]interface{}{"type": "string"},
+		},
+		"cache_to": map[string]interface{}{
+			"type":        "array",
+			"description": "External BuildKit cache destinations (e.g. 'type=registry,ref=user/app:cache,mode=max'). Container builds only.",
+			"items":       map[string]interface{}{"type": "string"},
+		},
 		"no_cache": map[string]interface{}{
 			"type":        "boolean",
 			"description": "Disable build caching.",
@@ -205,6 +220,9 @@ func extractBuildOptions(request mcp.CallToolRequest) client.BuildOptions {
 		VarFiles:      request.GetStringSlice("var_files", nil),
 		BuildArgs:     request.GetStringSlice("build_args", nil),
 		Tags:          request.GetStringSlice("tags", nil),
+		Labels:        request.GetStringSlice("labels", nil),
+		CacheFrom:     request.GetStringSlice("cache_from", nil),
+		CacheTo:       request.GetStringSlice("cache_to", nil),
 		NoCache:       request.GetBool("no_cache", false),
 		SaveDigests:   request.GetBool("save_digests", false),
 		DigestDir:     request.GetString("digest_dir", ""),

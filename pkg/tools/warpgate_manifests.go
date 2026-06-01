@@ -172,3 +172,137 @@ func warpgateManifestsCreate(s *server.MCPServer, logger *logging.Logger, warpga
 
 	s.AddTool(tool, handler)
 }
+
+func warpgateManifestsList(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
+	tool := mcp.Tool{
+		Name:        "warpgate_manifests_list",
+		Description: "List available manifest tags for an image in a container registry.",
+		InputSchema: mcp.ToolInputSchema{
+			Type: "object",
+			Properties: map[string]interface{}{
+				"name": map[string]interface{}{
+					"type":        "string",
+					"description": "Image name to list tags for (e.g., 'attack-box').",
+				},
+				"registry": map[string]interface{}{
+					"type":        "string",
+					"description": "Container registry, e.g. 'ghcr.io/cowdogmoo'. Required by the warpgate CLI.",
+				},
+				"namespace": map[string]interface{}{
+					"type":        "string",
+					"description": "Image namespace/organization (optional).",
+				},
+				"auth_file": map[string]interface{}{
+					"type":        "string",
+					"description": "Path to a registry auth file (optional).",
+				},
+			},
+			Required: []string{"name", "registry"},
+		},
+	}
+
+	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		name := request.GetString("name", "")
+		if name == "" {
+			return mcp.NewToolResultError("name is required and must be a string"), nil
+		}
+		registry := request.GetString("registry", "")
+		if registry == "" {
+			return mcp.NewToolResultError("registry is required and must be a string"), nil
+		}
+
+		wg, err := client.NewWarpgateClient(warpgatePath)
+		if err != nil {
+			logger.Errorf("Failed to create Warpgate client: %v", err)
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to create Warpgate client: %v", err)), nil
+		}
+		if !wg.IsCLIAvailable() {
+			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 3.0.0"), nil
+		}
+
+		opts := client.ManifestsListOptions{
+			Name:      name,
+			Registry:  registry,
+			Namespace: request.GetString("namespace", ""),
+			AuthFile:  request.GetString("auth_file", ""),
+		}
+		output, err := wg.WarpgateManifestsList(ctx, opts)
+		if err != nil {
+			logger.Errorf("Failed to list manifests: %v", err)
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to list manifests: %v\n%s", err, output)), nil
+		}
+		return mcp.NewToolResultText(output), nil
+	}
+
+	s.AddTool(tool, handler)
+}
+
+func warpgateManifestsInspect(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
+	tool := mcp.Tool{
+		Name:        "warpgate_manifests_inspect",
+		Description: "Inspect a multi-architecture manifest in a container registry. Returns architectures, digests, sizes, and annotations for each tag.",
+		InputSchema: mcp.ToolInputSchema{
+			Type: "object",
+			Properties: map[string]interface{}{
+				"name": map[string]interface{}{
+					"type":        "string",
+					"description": "Image name to inspect (e.g., 'attack-box').",
+				},
+				"registry": map[string]interface{}{
+					"type":        "string",
+					"description": "Container registry, e.g. 'ghcr.io/cowdogmoo'. Required by the warpgate CLI.",
+				},
+				"namespace": map[string]interface{}{
+					"type":        "string",
+					"description": "Image namespace/organization (optional).",
+				},
+				"tags": map[string]interface{}{
+					"type":        "array",
+					"description": "Tags to inspect. Defaults to ['latest'] when omitted.",
+					"items":       map[string]interface{}{"type": "string"},
+				},
+				"auth_file": map[string]interface{}{
+					"type":        "string",
+					"description": "Path to a registry auth file (optional).",
+				},
+			},
+			Required: []string{"name", "registry"},
+		},
+	}
+
+	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		name := request.GetString("name", "")
+		if name == "" {
+			return mcp.NewToolResultError("name is required and must be a string"), nil
+		}
+		registry := request.GetString("registry", "")
+		if registry == "" {
+			return mcp.NewToolResultError("registry is required and must be a string"), nil
+		}
+
+		wg, err := client.NewWarpgateClient(warpgatePath)
+		if err != nil {
+			logger.Errorf("Failed to create Warpgate client: %v", err)
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to create Warpgate client: %v", err)), nil
+		}
+		if !wg.IsCLIAvailable() {
+			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 3.0.0"), nil
+		}
+
+		opts := client.ManifestsInspectOptions{
+			Name:      name,
+			Registry:  registry,
+			Namespace: request.GetString("namespace", ""),
+			Tags:      request.GetStringSlice("tags", nil),
+			AuthFile:  request.GetString("auth_file", ""),
+		}
+		output, err := wg.WarpgateManifestsInspect(ctx, opts)
+		if err != nil {
+			logger.Errorf("Failed to inspect manifest: %v", err)
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to inspect manifest: %v\n%s", err, output)), nil
+		}
+		return mcp.NewToolResultText(output), nil
+	}
+
+	s.AddTool(tool, handler)
+}

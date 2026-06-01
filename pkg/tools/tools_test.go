@@ -220,6 +220,16 @@ func TestIndividualToolRegistration(t *testing.T) {
 		s := server.NewMCPServer("test", "1.0.0")
 		warpgateCleanup(s, logger, tmpDir)
 	})
+
+	t.Run("warpgateManifestsList", func(_ *testing.T) {
+		s := server.NewMCPServer("test", "1.0.0")
+		warpgateManifestsList(s, logger, tmpDir)
+	})
+
+	t.Run("warpgateManifestsInspect", func(_ *testing.T) {
+		s := server.NewMCPServer("test", "1.0.0")
+		warpgateManifestsInspect(s, logger, tmpDir)
+	})
 }
 
 func TestToolRegistrationWithEmptyPath(t *testing.T) {
@@ -240,6 +250,8 @@ func TestToolRegistrationWithEmptyPath(t *testing.T) {
 	warpgateTemplatesUpdate(s, logger, "")
 	createTemplate(s, logger, "")
 	warpgateManifestsCreate(s, logger, "")
+	warpgateManifestsList(s, logger, "")
+	warpgateManifestsInspect(s, logger, "")
 	warpgateConfigGet(s, logger, "")
 	warpgateConfigSet(s, logger, "")
 	warpgateConfigShow(s, logger, "")
