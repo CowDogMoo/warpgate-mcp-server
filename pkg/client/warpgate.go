@@ -532,6 +532,18 @@ func (w *WarpgateClient) WarpgateTemplatesRemove(ctx context.Context, nameOrPath
 	return w.ExecuteCLI(ctx, args...)
 }
 
+// WarpgateTemplatesSearch searches the template registry by query.
+func (w *WarpgateClient) WarpgateTemplatesSearch(ctx context.Context, query string) (string, error) {
+	args := []string{"templates", "search", query}
+	return w.ExecuteCLI(ctx, args...)
+}
+
+// WarpgateTemplatesUpdate refreshes the local template cache from all
+// configured repositories.
+func (w *WarpgateClient) WarpgateTemplatesUpdate(ctx context.Context) (string, error) {
+	return w.ExecuteCLI(ctx, "templates", "update")
+}
+
 // ManifestsCreateOptions contains options for `warpgate manifests create`.
 // The current CLI takes no positional args; all inputs are flags. Registry
 // is required by the CLI's PersistentPreRunE check.
@@ -655,6 +667,63 @@ func (w *WarpgateClient) WarpgateConfigSet(ctx context.Context, key, value strin
 // WarpgateConfigShow shows current configuration
 func (w *WarpgateClient) WarpgateConfigShow(ctx context.Context) (string, error) {
 	args := []string{"config", "show"}
+	return w.ExecuteCLI(ctx, args...)
+}
+
+// WarpgateConfigInit creates a new default configuration file. The CLI refuses
+// to overwrite an existing config unless force is true.
+func (w *WarpgateClient) WarpgateConfigInit(ctx context.Context, force bool) (string, error) {
+	args := []string{"config", "init"}
+	if force {
+		args = append(args, "--force")
+	}
+	return w.ExecuteCLI(ctx, args...)
+}
+
+// WarpgateConfigPath prints the path to the warpgate configuration file.
+func (w *WarpgateClient) WarpgateConfigPath(ctx context.Context) (string, error) {
+	return w.ExecuteCLI(ctx, "config", "path")
+}
+
+// CleanupOptions contains options for `warpgate cleanup`. The CLI accepts an
+// optional positional build name to scope the cleanup; if BuildName is empty
+// and All is true, the CLI cleans up across every warpgate-tagged resource.
+type CleanupOptions struct {
+	BuildName    string
+	Region       string
+	DryRun       bool
+	All          bool
+	Versions     bool
+	KeepVersions int // versions to keep when Versions is true; CLI default 3
+	Yes          bool
+}
+
+// WarpgateCleanup removes AWS resources created by prior `warpgate build`
+// invocations. This is destructive against cloud state — callers should run
+// with DryRun=true first to preview what would be deleted.
+func (w *WarpgateClient) WarpgateCleanup(ctx context.Context, opts CleanupOptions) (string, error) {
+	args := []string{"cleanup"}
+	if opts.BuildName != "" {
+		args = append(args, opts.BuildName)
+	}
+	if opts.Region != "" {
+		args = append(args, "--region", opts.Region)
+	}
+	if opts.DryRun {
+		args = append(args, "--dry-run")
+	}
+	if opts.All {
+		args = append(args, "--all")
+	}
+	if opts.Versions {
+		args = append(args, "--versions")
+	}
+	if opts.KeepVersions > 0 {
+		args = append(args, "--keep", fmt.Sprintf("%d", opts.KeepVersions))
+	}
+	if opts.Yes {
+		args = append(args, "--yes")
+	}
 	return w.ExecuteCLI(ctx, args...)
 }
 

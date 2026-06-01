@@ -136,3 +136,70 @@ func warpgateConfigShow(s *server.MCPServer, logger *logging.Logger, warpgatePat
 
 	s.AddTool(tool, handler)
 }
+
+func warpgateConfigInit(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
+	tool := mcp.Tool{
+		Name:        "warpgate_config_init",
+		Description: "Create a new warpgate configuration file with default values at the XDG-compliant location (typically ~/.config/warpgate/config.yaml). Refuses to overwrite an existing file unless force is true.",
+		InputSchema: mcp.ToolInputSchema{
+			Type: "object",
+			Properties: map[string]interface{}{
+				"force": map[string]interface{}{
+					"type":        "boolean",
+					"description": "Overwrite the config file if it already exists.",
+				},
+			},
+		},
+	}
+
+	handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		wg, err := client.NewWarpgateClient(warpgatePath)
+		if err != nil {
+			logger.Errorf("Failed to create Warpgate client: %v", err)
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to create Warpgate client: %v", err)), nil
+		}
+		if !wg.IsCLIAvailable() {
+			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 3.0.0"), nil
+		}
+
+		force := request.GetBool("force", false)
+		output, err := wg.WarpgateConfigInit(ctx, force)
+		if err != nil {
+			logger.Errorf("Failed to initialize config: %v", err)
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to initialize config: %v\n%s", err, output)), nil
+		}
+		return mcp.NewToolResultText(output), nil
+	}
+
+	s.AddTool(tool, handler)
+}
+
+func warpgateConfigPath(s *server.MCPServer, logger *logging.Logger, warpgatePath string) {
+	tool := mcp.Tool{
+		Name:        "warpgate_config_path",
+		Description: "Show the filesystem path of the warpgate configuration file.",
+		InputSchema: mcp.ToolInputSchema{
+			Type: "object",
+		},
+	}
+
+	handler := func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		wg, err := client.NewWarpgateClient(warpgatePath)
+		if err != nil {
+			logger.Errorf("Failed to create Warpgate client: %v", err)
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to create Warpgate client: %v", err)), nil
+		}
+		if !wg.IsCLIAvailable() {
+			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 3.0.0"), nil
+		}
+
+		output, err := wg.WarpgateConfigPath(ctx)
+		if err != nil {
+			logger.Errorf("Failed to get config path: %v", err)
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to get config path: %v\n%s", err, output)), nil
+		}
+		return mcp.NewToolResultText(output), nil
+	}
+
+	s.AddTool(tool, handler)
+}

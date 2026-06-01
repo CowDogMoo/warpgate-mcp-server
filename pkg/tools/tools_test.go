@@ -195,6 +195,31 @@ func TestIndividualToolRegistration(t *testing.T) {
 		s := server.NewMCPServer("test", "1.0.0")
 		warpgateConvert(s, logger, tmpDir)
 	})
+
+	t.Run("warpgateTemplatesSearch", func(_ *testing.T) {
+		s := server.NewMCPServer("test", "1.0.0")
+		warpgateTemplatesSearch(s, logger, tmpDir)
+	})
+
+	t.Run("warpgateTemplatesUpdate", func(_ *testing.T) {
+		s := server.NewMCPServer("test", "1.0.0")
+		warpgateTemplatesUpdate(s, logger, tmpDir)
+	})
+
+	t.Run("warpgateConfigInit", func(_ *testing.T) {
+		s := server.NewMCPServer("test", "1.0.0")
+		warpgateConfigInit(s, logger, tmpDir)
+	})
+
+	t.Run("warpgateConfigPath", func(_ *testing.T) {
+		s := server.NewMCPServer("test", "1.0.0")
+		warpgateConfigPath(s, logger, tmpDir)
+	})
+
+	t.Run("warpgateCleanup", func(_ *testing.T) {
+		s := server.NewMCPServer("test", "1.0.0")
+		warpgateCleanup(s, logger, tmpDir)
+	})
 }
 
 func TestToolRegistrationWithEmptyPath(t *testing.T) {
@@ -211,11 +236,16 @@ func TestToolRegistrationWithEmptyPath(t *testing.T) {
 	warpgateTemplatesInfo(s, logger, "")
 	warpgateTemplatesAdd(s, logger, "")
 	warpgateTemplatesRemove(s, logger, "")
+	warpgateTemplatesSearch(s, logger, "")
+	warpgateTemplatesUpdate(s, logger, "")
 	createTemplate(s, logger, "")
 	warpgateManifestsCreate(s, logger, "")
 	warpgateConfigGet(s, logger, "")
 	warpgateConfigSet(s, logger, "")
 	warpgateConfigShow(s, logger, "")
+	warpgateConfigInit(s, logger, "")
+	warpgateConfigPath(s, logger, "")
+	warpgateCleanup(s, logger, "")
 	warpgateConvert(s, logger, "")
 
 	t.Log("All tools registered with empty path without panic")

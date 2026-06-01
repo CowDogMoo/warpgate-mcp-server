@@ -447,6 +447,41 @@ func TestWarpgateConvertNotAvailable(t *testing.T) {
 	}
 }
 
+func TestWarpgateTemplatesSearchNotAvailable(t *testing.T) {
+	c := &WarpgateClient{cliDetected: false}
+	if _, err := c.WarpgateTemplatesSearch(context.Background(), "attack"); err == nil {
+		t.Error("WarpgateTemplatesSearch should fail when CLI is not available")
+	}
+}
+
+func TestWarpgateTemplatesUpdateNotAvailable(t *testing.T) {
+	c := &WarpgateClient{cliDetected: false}
+	if _, err := c.WarpgateTemplatesUpdate(context.Background()); err == nil {
+		t.Error("WarpgateTemplatesUpdate should fail when CLI is not available")
+	}
+}
+
+func TestWarpgateConfigInitNotAvailable(t *testing.T) {
+	c := &WarpgateClient{cliDetected: false}
+	if _, err := c.WarpgateConfigInit(context.Background(), false); err == nil {
+		t.Error("WarpgateConfigInit should fail when CLI is not available")
+	}
+}
+
+func TestWarpgateConfigPathNotAvailable(t *testing.T) {
+	c := &WarpgateClient{cliDetected: false}
+	if _, err := c.WarpgateConfigPath(context.Background()); err == nil {
+		t.Error("WarpgateConfigPath should fail when CLI is not available")
+	}
+}
+
+func TestWarpgateCleanupNotAvailable(t *testing.T) {
+	c := &WarpgateClient{cliDetected: false}
+	if _, err := c.WarpgateCleanup(context.Background(), CleanupOptions{DryRun: true}); err == nil {
+		t.Error("WarpgateCleanup should fail when CLI is not available")
+	}
+}
+
 func TestNewWarpgateClientWithBinaryInvalidPath(t *testing.T) {
 	_, err := NewWarpgateClientWithBinary("", "/nonexistent/warpgate/binary")
 	if err == nil {
