@@ -278,6 +278,9 @@ type BuildOptions struct {
 	VarFiles      []string // YAML var files
 	BuildArgs     []string // build args (key=value)
 	Tags          []string
+	Labels        []string // image labels (key=value)
+	CacheFrom     []string // external BuildKit cache sources
+	CacheTo       []string // external BuildKit cache destinations
 	NoCache       bool
 	SaveDigests   bool
 	DigestDir     string
@@ -314,12 +317,8 @@ type BuildOptions struct {
 	ProxmoxPool     string
 }
 
-// buildArgs converts BuildOptions to the argv `warpgate build` expects. Kept
-// private and used by both WarpgateBuild and WarpgateBuildStreaming so the two
-// can't drift.
-//
-// Composed from per-target helpers to keep each function's cyclomatic
-// complexity tractable; the CLI surface is large.
+// buildArgs converts BuildOptions to the argv `warpgate build` expects.
+// Shared by WarpgateBuild and WarpgateBuildStreaming so they can't drift.
 func buildArgs(template string, opts BuildOptions) []string {
 	args := []string{"build"}
 	args = appendCoreBuildArgs(args, template, opts)
@@ -365,6 +364,15 @@ func appendCoreBuildArgs(args []string, template string, opts BuildOptions) []st
 	}
 	for _, tag := range opts.Tags {
 		args = append(args, "--tag", tag)
+	}
+	for _, l := range opts.Labels {
+		args = append(args, "--label", l)
+	}
+	for _, c := range opts.CacheFrom {
+		args = append(args, "--cache-from", c)
+	}
+	for _, c := range opts.CacheTo {
+		args = append(args, "--cache-to", c)
 	}
 	if opts.NoCache {
 		args = append(args, "--no-cache")

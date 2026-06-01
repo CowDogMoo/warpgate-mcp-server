@@ -26,6 +26,11 @@ jobs:
           git config --global user.email "action@github.com"
           git config --global user.name "GitHub Action"
 
+      - name: Install warpgate CLI (for CLI parity test)
+        run: |
+          go install github.com/cowdogmoo/warpgate/v3/cmd/warpgate@main
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
       - name: Generate the coverage output
         run: |
           bash .hooks/run-go-tests.sh coverage
