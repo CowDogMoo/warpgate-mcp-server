@@ -16,8 +16,10 @@ import (
 	"sync"
 )
 
-// MinimumWarpgateVersion is the minimum supported warpgate CLI version
-const MinimumWarpgateVersion = "1.0.0"
+// MinimumWarpgateVersion is the minimum supported warpgate CLI version.
+// The CLI's Go module path is .../warpgate/v3, and several MCP tool contracts
+// depend on v3-era flags (e.g. manifests create --name/--registry).
+const MinimumWarpgateVersion = "3.0.0"
 
 // WarpgateClient handles interaction with the Warpgate repository and CLI
 type WarpgateClient struct {
@@ -395,24 +397,48 @@ func (w *WarpgateClient) WarpgateTemplatesRemove(ctx context.Context, nameOrPath
 	return w.ExecuteCLI(ctx, args...)
 }
 
-// WarpgateManifestsCreate creates a multi-arch manifest
-func (w *WarpgateClient) WarpgateManifestsCreate(ctx context.Context, name string, images []string, push bool) (string, error) {
-	args := []string{"manifests", "create", name}
-	args = append(args, images...)
-
-	if push {
-		args = append(args, "--push")
-	}
-
-	return w.ExecuteCLI(ctx, args...)
+// ManifestsCreateOptions contains options for `warpgate manifests create`.
+// The current CLI takes no positional args; all inputs are flags. Registry
+// is required by the CLI's PersistentPreRunE check.
+type ManifestsCreateOptions struct {
+	Name      string
+	Registry  string
+	Namespace string
+	AuthFile  string
+	Tags      []string
+	DigestDir string
+	DryRun    bool
+	Force     bool
 }
 
-// WarpgateManifestsPush pushes a manifest
-func (w *WarpgateClient) WarpgateManifestsPush(ctx context.Context, name string, purge bool) (string, error) {
-	args := []string{"manifests", "push", name}
+// WarpgateManifestsCreate creates and pushes a multi-arch manifest from
+// digest files produced by prior `warpgate build --save-digests` invocations.
+func (w *WarpgateClient) WarpgateManifestsCreate(ctx context.Context, opts ManifestsCreateOptions) (string, error) {
+	args := []string{"manifests", "create"}
 
-	if purge {
-		args = append(args, "--purge")
+	if opts.Name != "" {
+		args = append(args, "--name", opts.Name)
+	}
+	if opts.Registry != "" {
+		args = append(args, "--registry", opts.Registry)
+	}
+	if opts.Namespace != "" {
+		args = append(args, "--namespace", opts.Namespace)
+	}
+	if opts.AuthFile != "" {
+		args = append(args, "--auth-file", opts.AuthFile)
+	}
+	for _, tag := range opts.Tags {
+		args = append(args, "--tag", tag)
+	}
+	if opts.DigestDir != "" {
+		args = append(args, "--digest-dir", opts.DigestDir)
+	}
+	if opts.DryRun {
+		args = append(args, "--dry-run")
+	}
+	if opts.Force {
+		args = append(args, "--force")
 	}
 
 	return w.ExecuteCLI(ctx, args...)

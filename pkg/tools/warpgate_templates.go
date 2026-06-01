@@ -43,7 +43,7 @@ func warpgateTemplatesList(s *server.MCPServer, logger *logging.Logger, warpgate
 		}
 
 		if !wg.IsCLIAvailable() {
-			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 1.0.0"), nil
+			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 3.0.0"), nil
 		}
 
 		source := request.GetString("source", "")
@@ -90,7 +90,7 @@ func warpgateTemplatesInfo(s *server.MCPServer, logger *logging.Logger, warpgate
 		}
 
 		if !wg.IsCLIAvailable() {
-			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 1.0.0"), nil
+			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 3.0.0"), nil
 		}
 
 		output, err := wg.WarpgateTemplatesInfo(ctx, template)
@@ -138,7 +138,7 @@ func warpgateTemplatesAdd(s *server.MCPServer, logger *logging.Logger, warpgateP
 		}
 
 		if !wg.IsCLIAvailable() {
-			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 1.0.0"), nil
+			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 3.0.0"), nil
 		}
 
 		name := request.GetString("name", "")
@@ -185,7 +185,7 @@ func warpgateTemplatesRemove(s *server.MCPServer, logger *logging.Logger, warpga
 		}
 
 		if !wg.IsCLIAvailable() {
-			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 1.0.0"), nil
+			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 3.0.0"), nil
 		}
 
 		output, err := wg.WarpgateTemplatesRemove(ctx, name)

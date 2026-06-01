@@ -27,7 +27,6 @@ func RegisterTools(s *server.MCPServer, logger *logging.Logger, warpgatePath str
 
 	// Manifest operations
 	warpgateManifestsCreate(s, logger, warpgatePath)
-	warpgateManifestsPush(s, logger, warpgatePath)
 
 	// Config management
 	warpgateConfigGet(s, logger, warpgatePath)

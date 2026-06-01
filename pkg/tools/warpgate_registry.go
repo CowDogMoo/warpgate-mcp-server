@@ -59,7 +59,7 @@ func warpgateRegistryList(s *server.MCPServer, logger *logging.Logger, warpgateP
 		}
 
 		if !wg.IsCLIAvailable() {
-			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 1.0.0"), nil
+			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 3.0.0"), nil
 		}
 
 		opts := client.ManifestsListOptions{
@@ -134,7 +134,7 @@ func warpgateRegistryInspect(s *server.MCPServer, logger *logging.Logger, warpga
 		}
 
 		if !wg.IsCLIAvailable() {
-			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 1.0.0"), nil
+			return mcp.NewToolResultError("warpgate CLI is not available. Please install warpgate >= 3.0.0"), nil
 		}
 
 		opts := client.ManifestsInspectOptions{
