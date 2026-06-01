@@ -140,7 +140,7 @@ func TestMockWarpgateClient_WarpgateTemplatesList(t *testing.T) {
 	mock := NewMockWarpgateClient()
 	mock.TemplatesListResponse = "attack-box\nsliver\natomic-red-team"
 
-	result, err := mock.WarpgateTemplatesList(context.Background(), "local", "table")
+	result, err := mock.WarpgateTemplatesList(context.Background(), "local", "table", true)
 	if err != nil {
 		t.Errorf("WarpgateTemplatesList returned unexpected error: %v", err)
 	}
@@ -155,6 +155,10 @@ func TestMockWarpgateClient_WarpgateTemplatesList(t *testing.T) {
 
 	if mock.LastTemplatesListFormat != "table" {
 		t.Errorf("LastTemplatesListFormat = %q, want %q", mock.LastTemplatesListFormat, "table")
+	}
+
+	if !mock.LastTemplatesListQuiet {
+		t.Error("LastTemplatesListQuiet should be true")
 	}
 }
 
@@ -361,7 +365,16 @@ func TestMockWarpgateClient_WarpgateConvert(t *testing.T) {
 	mock := NewMockWarpgateClient()
 	mock.ConvertResponse = "Conversion completed"
 
-	result, err := mock.WarpgateConvert(context.Background(), "/path/to/packer.json", "/path/to/output")
+	includeAMI := false
+	opts := ConvertOptions{
+		Source:     "/path/to/packer.json",
+		Output:     "/path/to/output",
+		Author:     "ops-team",
+		BaseImage:  "ubuntu:22.04",
+		IncludeAMI: &includeAMI,
+		DryRun:     true,
+	}
+	result, err := mock.WarpgateConvert(context.Background(), opts)
 	if err != nil {
 		t.Errorf("WarpgateConvert returned unexpected error: %v", err)
 	}
@@ -370,12 +383,24 @@ func TestMockWarpgateClient_WarpgateConvert(t *testing.T) {
 		t.Errorf("WarpgateConvert() = %q, want %q", result, "Conversion completed")
 	}
 
-	if mock.LastConvertSource != "/path/to/packer.json" {
-		t.Errorf("LastConvertSource = %q, want %q", mock.LastConvertSource, "/path/to/packer.json")
+	if mock.LastConvertOpts.Source != "/path/to/packer.json" {
+		t.Errorf("LastConvertOpts.Source = %q, want %q", mock.LastConvertOpts.Source, "/path/to/packer.json")
 	}
 
-	if mock.LastConvertOutput != "/path/to/output" {
-		t.Errorf("LastConvertOutput = %q, want %q", mock.LastConvertOutput, "/path/to/output")
+	if mock.LastConvertOpts.Output != "/path/to/output" {
+		t.Errorf("LastConvertOpts.Output = %q, want %q", mock.LastConvertOpts.Output, "/path/to/output")
+	}
+
+	if mock.LastConvertOpts.Author != "ops-team" {
+		t.Errorf("LastConvertOpts.Author = %q, want %q", mock.LastConvertOpts.Author, "ops-team")
+	}
+
+	if !mock.LastConvertOpts.DryRun {
+		t.Error("LastConvertOpts.DryRun should be true")
+	}
+
+	if mock.LastConvertOpts.IncludeAMI == nil || *mock.LastConvertOpts.IncludeAMI {
+		t.Error("LastConvertOpts.IncludeAMI should be a pointer to false")
 	}
 }
 
@@ -451,7 +476,7 @@ func TestMockWarpgateClient_ErrorResponses(t *testing.T) {
 				mock.TemplatesListError = expectedErr
 			},
 			execute: func() error {
-				_, err := mock.WarpgateTemplatesList(context.Background(), "", "")
+				_, err := mock.WarpgateTemplatesList(context.Background(), "", "", false)
 				return err
 			},
 		},
