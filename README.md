@@ -7,8 +7,7 @@ agent.**
 [![Go Version](https://img.shields.io/github/go-mod/go-version/CowDogMoo/warpgate-mcp-server?logo=go)](https://go.dev/)
 [![Release](https://img.shields.io/github/v/release/CowDogMoo/warpgate-mcp-server?label=Release&logo=github)](https://github.com/CowDogMoo/warpgate-mcp-server/releases)
 
-[![Tests](https://github.com/CowDogMoo/warpgate-mcp-server/actions/workflows/tests.yaml/badge.svg)](https://github.com/CowDogMoo/warpgate-mcp-server/actions/workflows/tests.yaml)
-[![Pre-Commit](https://github.com/CowDogMoo/warpgate-mcp-server/actions/workflows/pre-commit.yaml/badge.svg)](https://github.com/CowDogMoo/warpgate-mcp-server/actions/workflows/pre-commit.yaml)
+[![Go CI](https://github.com/CowDogMoo/warpgate-mcp-server/actions/workflows/go-ci.yaml/badge.svg)](https://github.com/CowDogMoo/warpgate-mcp-server/actions/workflows/go-ci.yaml)
 [![Semgrep](https://github.com/CowDogMoo/warpgate-mcp-server/actions/workflows/semgrep.yaml/badge.svg)](https://github.com/CowDogMoo/warpgate-mcp-server/actions/workflows/semgrep.yaml)
 [![Renovate](https://github.com/CowDogMoo/warpgate-mcp-server/actions/workflows/renovate.yaml/badge.svg)](https://github.com/CowDogMoo/warpgate-mcp-server/actions/workflows/renovate.yaml)
 
@@ -40,7 +39,7 @@ registries — without operators leaving the chat.
 
 | Requirement       | Version | Notes                                              |
 | ----------------- | ------- | -------------------------------------------------- |
-| **Go**            | 1.24+   | Required for `go install`                          |
+| **Go**            | 1.26+   | Required for `go install`                          |
 | **Warpgate CLI**  | 1.0.0+  | The MCP server shells out to `warpgate`            |
 | **Docker**        | 20.10+  | Required for container builds                      |
 | **Docker Buildx** | 0.8+    | Required for multi-arch builds                     |
