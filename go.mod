@@ -3,7 +3,7 @@ module github.com/cowdogmoo/warpgate-mcp-server
 go 1.27.2
 
 require (
-	github.com/mark3labs/mcp-go v0.58.0
+	github.com/mark3labs/mcp-go v1.2.1
 	github.com/spf13/cobra v1.10.2
 	gopkg.in/yaml.v3 v3.0.1
 )
