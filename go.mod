@@ -1,6 +1,6 @@
 module github.com/cowdogmoo/warpgate-mcp-server
 
-go 1.24
+go 1.26
 
 require (
 	github.com/mark3labs/mcp-go v0.43.2

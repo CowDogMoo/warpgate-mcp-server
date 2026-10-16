@@ -1,0 +1,28 @@
+---
+name: Go CI
+
+on:
+  merge_group:
+  pull_request:
+    branches: ["main"]
+  push:
+    branches: ["main"]
+  schedule:
+    # Run once a week (see https://crontab.guru)
+    - cron: "0 0 * * 0"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  go-ci:
+    uses: CowDogMoo/renovate-config/.github/workflows/go-ci.yaml@main
+    permissions:
+      contents: read
+    with:
+      # The CLI parity test shells out to the warpgate binary.
+      test-go-installs: github.com/cowdogmoo/warpgate/v3/cmd/warpgate@main
