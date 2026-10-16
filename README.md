@@ -160,23 +160,23 @@ Prompts ship with the server as parameterized workflow recipes. MCP clients
 list them automatically; pick one and the server returns a step-by-step
 script that chains the tools above.
 
-| Prompt                    | Purpose                                                              |
-| ------------------------- | -------------------------------------------------------------------- |
-| `bootstrap_new_template`  | Scaffold, configure, validate, and run the first build of a template |
-| `debug_failed_build`      | Walk a failing build through validation, schema, config, and logs    |
-| `add_provisioner`         | Add a shell, ansible, or file provisioner to an existing template    |
-| `convert_from_packer`     | Convert a Packer template and verify it builds end-to-end            |
+| Prompt                    | Purpose                                                               |
+| ------------------------- | --------------------------------------------------------------------- |
+| `bootstrap_new_template`  | Scaffold, configure, validate, and run the first build of a template  |
+| `debug_failed_build`      | Walk a failing build through validation, schema, config, and logs     |
+| `add_provisioner`         | Add a shell, ansible, or file provisioner to an existing template     |
+| `convert_from_packer`     | Convert a Packer template and verify it builds end-to-end             |
 | `publish_multiarch_image` | Build per-arch, assemble a manifest, push, and verify on the registry |
 
 ## Resources
 
-| URI                                  | Description                                              |
-| ------------------------------------ | -------------------------------------------------------- |
-| `warpgate://config`                  | Effective `warpgate config show` output                  |
-| `warpgate://cli-info`                | Detected binary path, version, and minimum required version |
-| `warpgate://schema/template`         | JSON Schema for `warpgate.yaml` validation               |
-| `warpgate://template/{name}/readme`  | README for a specific template                           |
-| `warpgate://template/{name}/config`  | `warpgate templates info` output for a template          |
+| URI                                 | Description                                                 |
+| ----------------------------------- | ----------------------------------------------------------- |
+| `warpgate://config`                 | Effective `warpgate config show` output                     |
+| `warpgate://cli-info`               | Detected binary path, version, and minimum required version |
+| `warpgate://schema/template`        | JSON Schema for `warpgate.yaml` validation                  |
+| `warpgate://template/{name}/readme` | README for a specific template                              |
+| `warpgate://template/{name}/config` | `warpgate templates info` output for a template             |
 
 ## Configuration
 
