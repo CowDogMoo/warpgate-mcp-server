@@ -6,13 +6,13 @@ Thanks for your interest in contributing to the Warpgate MCP Server.
 
 ### Prerequisites
 
-| Requirement      | Version | Notes                                  |
-| ---------------- | ------- | -------------------------------------- |
-| **Go**           | 1.26+   | Toolchain for building and testing     |
-| **Task**         | 3.x     | [go-task](https://taskfile.dev/) runner |
-| **pre-commit**   | 3.x+    | Drives format/lint/security hooks      |
+| Requirement      | Version | Notes                                               |
+| ---------------- | ------- | --------------------------------------------------- |
+| **Go**           | 1.26+   | Toolchain for building and testing                  |
+| **Task**         | 3.x     | [go-task](https://taskfile.dev/) runner             |
+| **pre-commit**   | 3.x+    | Drives format/lint/security hooks                   |
 | **Docker**       | 20.10+  | Required for container builds and the Docker target |
-| **Warpgate CLI** | 1.0.0+  | The MCP server shells out to `warpgate` |
+| **Warpgate CLI** | 1.0.0+  | The MCP server shells out to `warpgate`             |
 
 ### Getting Started
 
